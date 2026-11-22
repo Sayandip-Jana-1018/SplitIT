@@ -15,6 +15,7 @@ import { GlassProvider, TouchRipples } from '~/glass/GlassProvider';
 import { LiquidWall } from '~/glass/LiquidWall';
 import { ThemeProvider, useLook } from '~/theme/ThemeProvider';
 import { FONT_FILES } from '~/theme/type';
+import { ShareReceiver } from '~/ui/ShareReceiver';
 import { ToastProvider } from '~/ui/Toast';
 import { AuthProvider } from '~/auth/AuthProvider';
 import { PushProvider } from '~/notifications/PushProvider';
@@ -113,6 +114,7 @@ function Frame() {
                             <Stack.Screen name="new-group" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
                             <Stack.Screen name="join" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
                         </Stack>
+                        <ShareReceiver />
                     </NavigationTheme>
                     </PushProvider>
                     </LedgerProvider>

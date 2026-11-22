@@ -5,13 +5,14 @@
  * with the photo kept as its receipt; or splitting it item by item, by who had what (SplitByItems).
  *
  * The photo is shrunk on the phone first (scanPhoto.ts). The reading needs a connection and an
- * account; without either, the screen says so and offers adding by hand. The demo shows a sample
+ * account; without either, the screen says so and offers adding by hand. A screenshot or bill shared
+ * to SplitIT from another app (ShareReceiver.tsx) opens here with `image`, and is read at once. The demo shows a sample
  * bill instead, read as the server would read it, so its results and splitting can be tried.
  */
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Camera, ImageIcon, ListChecks, RotateCcw, TriangleAlert } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, View } from 'react-native';
 import type { ReceiptScan } from '@/lib/contract/v1';
 import { api, ApiError } from '~/api';
@@ -63,6 +64,8 @@ const SLOW_MS = 9_000;
 export default function Scan() {
     const auth = useAuth();
     const toast = useToast();
+    const params = useLocalSearchParams<{ image?: string }>();
+    const signedIn = auth.status === 'signed_in';
     const [stage, setStage] = useState<Stage>({ kind: 'choose' });
     const [slow, setSlow] = useState(false);
     // A scan whose screen has gone, or that a newer one replaced, is let go.
@@ -83,7 +86,37 @@ export default function Scan() {
         [],
     );
 
-    if (auth.status !== 'signed_in' && stage.kind === 'choose') {
+    /** Reads a photo of a bill: shrunk on the phone, read by the server, shown back. */
+    const readPhoto = useCallback(async (uri: string, width: number, height: number) => {
+        const scan = ++current.current;
+        setStage({ kind: 'reading', uri });
+        try {
+            const image = await photoForScan(uri, width, height);
+            const read = await api.scanReceipt(image);
+            if (scan === current.current) setStage({ kind: 'read', uri, scan: read });
+        } catch (error) {
+            if (scan !== current.current) return;
+            const message =
+                error instanceof ApiError
+                    ? error.kind === 'offline'
+                        ? 'Scanning needs a connection. Add it by hand, or scan again when you’re back online.'
+                        : error.message
+                    : 'That photo couldn’t be read. Try another.';
+            setStage({ kind: 'failed', uri, message });
+        }
+    }, []);
+
+    // A screenshot shared to SplitIT is read as the screen opens, once.
+    const sharedRead = useRef(false);
+    useEffect(() => {
+        if (!params.image || sharedRead.current || !signedIn) return;
+        sharedRead.current = true;
+        const image = params.image;
+        const timer = setTimeout(() => void readPhoto(image, 0, 0), 0);
+        return () => clearTimeout(timer);
+    }, [params.image, signedIn, readPhoto]);
+
+    if (!signedIn && stage.kind === 'choose') {
         return (
             <Screen tabBar={false}>
                 <Header title="Scan a bill" close />
@@ -114,24 +147,7 @@ export default function Scan() {
         const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1 };
         const result = from === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
         const asset = result.canceled ? null : result.assets[0];
-        if (!asset) return;
-
-        const scan = ++current.current;
-        setStage({ kind: 'reading', uri: asset.uri });
-        try {
-            const image = await photoForScan(asset.uri, asset.width, asset.height);
-            const read = await api.scanReceipt(image);
-            if (scan === current.current) setStage({ kind: 'read', uri: asset.uri, scan: read });
-        } catch (error) {
-            if (scan !== current.current) return;
-            const message =
-                error instanceof ApiError
-                    ? error.kind === 'offline'
-                        ? 'Scanning needs a connection. Add it by hand, or scan again when you’re back online.'
-                        : error.message
-                    : 'That photo couldn’t be read. Try another.';
-            setStage({ kind: 'failed', uri: asset.uri, message });
-        }
+        if (asset) await readPhoto(asset.uri, asset.width, asset.height);
     };
 
     const addIt = (uri: string, scan: ReceiptScan) => {

@@ -23,7 +23,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Check, ClipboardPaste, Minus, Plus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import type { ParsedVoice } from '@/lib/contract/v1';
-import { readPaymentAlert, type PaymentAlert } from '@/lib/payments/alert';
+import { payeeOf, readPaymentAlert } from '@/lib/payments/alert';
 import { Platform, Pressable, TextInput, View } from 'react-native';
 import { inferCategory } from '@/lib/categoryInference';
 import { resolveSplits, type SplitRequest, type SplitType } from '@/lib/expenseSplits';
@@ -96,13 +96,6 @@ function evenly(memberIds: string[], amount: number, type: SplitMode): Record<st
 
 /** "4800", "3525.75", "12.5": paise as the keypad would have typed them. */
 const typedAmount = (paise: number) => (paise / 100).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
-
-/** Who a payment went to, as a title: "RAVI MENON" as Ravi Menon, "swiggy@icici" as Swiggy. */
-function payeeName(alert: PaymentAlert): string {
-    const raw = alert.counterparty && alert.counterparty !== alert.vpa ? alert.counterparty : (alert.vpa?.split('@')[0].replace(/[._-]+/g, ' ').replace(/d+/g, ' ') ?? '');
-    const words = raw.trim().split(/s+/).filter(Boolean);
-    return words.map((word) => (word === word.toUpperCase() || word === word.toLowerCase() ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : word)).join(' ');
-}
 
 /** The split as the screen holds it, from an expense being changed. */
 function splitFrom(expense: Expense, group: Group): { mode: SplitMode; among: string[]; typed: Record<string, string> } {
@@ -279,7 +272,7 @@ function ExpenseForm({ original, startGroup, scanned }: { original?: Expense; st
             return;
         }
         setAmount(typedAmount(alert.amount));
-        const payee = payeeName(alert);
+        const payee = payeeOf(alert);
         if (payee) setTitle(payee);
         setPayerId(ME);
         toast(payee ? `Pasted ${rupees(alert.amount)} paid to ${payee}` : `Pasted ${rupees(alert.amount)}`);

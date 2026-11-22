@@ -8,10 +8,12 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 const LONG_SIDE = 2000;
 
 export async function photoForScan(uri: string, width: number, height: number): Promise<string> {
+    const known = width > 0 && height > 0;
     const tall = height >= width;
-    const context = ImageManipulator.manipulate(uri, tall ? { maxHeight: LONG_SIDE } : { maxWidth: LONG_SIDE });
+    // A shared screenshot comes without its size: then it is shrunk to fit both ways as it is decoded.
+    const context = ImageManipulator.manipulate(uri, !known ? { maxWidth: LONG_SIDE, maxHeight: LONG_SIDE } : tall ? { maxHeight: LONG_SIDE } : { maxWidth: LONG_SIDE });
     // The camera doesn't always say how big its photo is (0 × 0): then decoding has already shrunk it.
-    if (width > 0 && height > 0 && Math.max(width, height) > LONG_SIDE) {
+    if (known && Math.max(width, height) > LONG_SIDE) {
         context.resize(tall ? { height: LONG_SIDE, width: null } : { width: LONG_SIDE, height: null });
     }
     const image = await context.renderAsync();

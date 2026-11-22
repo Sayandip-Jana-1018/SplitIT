@@ -18,7 +18,19 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#130B26"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "SEND",
+          "category": ["DEFAULT"],
+          "data": [{ "mimeType": "text/plain" }]
+        },
+        {
+          "action": "SEND",
+          "category": ["DEFAULT"],
+          "data": [{ "mimeType": "image/*" }]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",

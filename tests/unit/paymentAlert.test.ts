@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readPaymentAlert } from '@/lib/payments/alert';
+import { payeeOf, readPaymentAlert } from '@/lib/payments/alert';
 
 /*
  * A corpus in the shapes Indian banks and UPI apps use (written for this test, not anyone's real
@@ -61,5 +61,16 @@ describe('readPaymentAlert', () => {
         const falseCaptures = TRAPS.filter((text) => readPaymentAlert(text) !== null).length;
         expect(amountsRight / PAYMENTS.length).toBeGreaterThanOrEqual(0.95);
         expect(falseCaptures / TRAPS.length).toBeLessThanOrEqual(0.02);
+    });
+});
+
+describe('payeeOf', () => {
+    it.each([
+        ['Sent Rs.250.00 From HDFC Bank A/C x1234 To RAVI MENON On 21/11/26 Ref 432111112222', 'Ravi Menon'],
+        ['Rs.450.00 debited from A/c XX1234 to VPA swiggy@icici (UPI Ref No 432112345678)', 'Swiggy'],
+        ['Rs 100 debited from A/c XX1234 to VPA meera.iyer99@okhdfcbank', 'Meera Iyer'],
+        ["Paid ₹450 to McDonald's", "McDonald's"],
+    ])('names the payee of %s as %s', (text, name) => {
+        expect(payeeOf(readPaymentAlert(text)!)).toBe(name);
     });
 });

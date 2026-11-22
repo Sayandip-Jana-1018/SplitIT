@@ -122,3 +122,14 @@ export function readPaymentAlert(raw: string): PaymentAlert | null {
     const counterparty = named && named.toLowerCase() !== vpa ? named : (vpa ?? named);
     return { amount, direction, counterparty, vpa, reference, account, source };
 }
+
+/** Who a payment went to, as an expense's title: "RAVI MENON" as Ravi Menon, "swiggy@icici" as Swiggy. */
+export function payeeOf(alert: PaymentAlert): string {
+    const raw = alert.counterparty && alert.counterparty !== alert.vpa ? alert.counterparty : (alert.vpa?.split('@')[0].replace(/[._-]+/g, ' ').replace(/\d+/g, ' ') ?? '');
+    return raw
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((word) => (word === word.toUpperCase() || word === word.toLowerCase() ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : word))
+        .join(' ');
+}
