@@ -66,6 +66,18 @@ describe('a bill\'s item lines', () => {
         expect(extractLineItems('Veg Biryani .... ₹ 220')).toEqual([{ name: 'Veg Biryani', quantity: 1, price: 22_000, confidence: 70 }]);
     });
 
+    it('reads an Indian bill row: item, quantity, rate and amount, the amount as its price', () => {
+        expect(extractLineItems('Paneer Tikka 1 320.00 320.00\nButter Naan 4 60.00 240.00\nChicken Biryani 2 350.00 700.00')).toEqual([
+            { name: 'Paneer Tikka', quantity: 1, price: 32_000, confidence: 92 },
+            { name: 'Butter Naan', quantity: 4, price: 24_000, confidence: 92 },
+            { name: 'Chicken Biryani', quantity: 2, price: 70_000, confidence: 92 },
+        ]);
+        // A rate and amount that don't agree are kept at the amount printed, less sure.
+        expect(extractLineItems('Fresh Lime Soda 3 90.00 260.00')).toEqual([{ name: 'Fresh Lime Soda', quantity: 3, price: 26_000, confidence: 75 }]);
+        // Totals are still not items.
+        expect(extractLineItems('Sub Total 6 2030.00 2030.00')).toEqual([]);
+    });
+
     it('takes the shortest name: a one-character name is too short, so the line is no item (D-109)', () => {
         // A rewrite that tried longer names first read this as "- Rs" for ₹100.
         expect(extractLineItems('1. - Rs 100')).toEqual([]);
@@ -80,6 +92,8 @@ describe('text built to make a parser backtrack (D-109)', () => {
         ['digits before no "paid"', '1'.repeat(100_000) + 'x'],
         ['spaces after "paid"', 'paid' + ' '.repeat(100_000) + 'x'],
         ['a dot leader to nowhere', 'Tea' + '.'.repeat(100_000) + 'x'],
+        ['a quantity and rate, then spaces', 'Tea 1 20.00' + ' '.repeat(100_000) + 'x'],
+        ['a name of spaces before a quantity', 'T' + ' '.repeat(100_000) + '1 20 20x'],
     ])('reads %s in linear time', (_shape, text) => {
         const start = performance.now();
         parseTransactionText(text);

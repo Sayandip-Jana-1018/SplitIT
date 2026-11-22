@@ -80,6 +80,8 @@ const MERCHANT_PATTERNS = [
 // A name starts and ends with a non-space, as the shortest name always did, so
 // the spaces around it are read one way only (D-109).
 const LINE_ITEM_PATTERNS = [
+    // "Paneer Tikka 1 320.00 320.00": item, quantity, rate, amount (the row's total), as Indian bills print them
+    /^\s*([A-Za-z][\w\s&'.()/-]{1,40}?)\s+(\d{1,3})\s+([\d,]+(?:\.\d{1,2})?)\s+([\d,]+(?:\.\d{1,2})?)\s*$/,
     // "2 x ItemName ₹120.00" or "2x ItemName 120"
     /^[\s]*(\d+)\s*[xX×]\s+(\S(?:.*?\S)??)\s+(?:(?:₹|Rs\.?|INR)\s*)?([\d,]+(?:\.\d{1,2})?)\s*$/,
     // "ItemName x2 ₹120.00"
@@ -202,7 +204,15 @@ export function extractLineItems(rawText: string): ReceiptLineItem[] {
             let priceStr: string;
             let confidence = 80;
 
-            if (match.length === 4) {
+            if (match.length === 5) {
+                // Item, quantity, rate, amount: the price is the row's amount, as printed.
+                name = match[1].trim();
+                quantity = Number.parseInt(match[2], 10) || 1;
+                priceStr = match[4];
+                const rate = Number.parseFloat(match[3].replace(/,/g, ''));
+                const amount = Number.parseFloat(match[4].replace(/,/g, ''));
+                confidence = Math.abs(rate * quantity - amount) < 1 ? 92 : 75;
+            } else if (match.length === 4) {
                 // Patterns with qty: either (qty, name, price) or (name, qty, price)
                 const firstIsNum = /^\d+$/.test(match[1]);
                 if (firstIsNum) {

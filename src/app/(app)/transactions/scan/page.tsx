@@ -25,6 +25,7 @@ import { useToast } from '@/components/ui/Toast';
 import SplitByItems from '@/components/features/SplitByItems';
 import { useIsClient } from '@/hooks/useMediaQuery';
 import { uploadReceipt } from '@/lib/receiptUpload';
+import { receiptRows } from '@/lib/receiptRows';
 import { parseTransactionText, type ParsedTransaction } from '@/lib/transactionParser';
 import { cn, formatCurrency } from '@/lib/utils';
 import styles from './scan.module.css';
@@ -201,13 +202,24 @@ function ScanReceipt() {
         setProgress(0);
         try {
             const Tesseract = await import('tesseract.js');
-            const result = await Tesseract.recognize(file, 'eng', {
+            const worker = await Tesseract.createWorker('eng', undefined, {
                 ...TESSERACT_FILES,
                 logger: (message: { status: string; progress: number }) => {
                     if (message.status === 'recognizing text') setProgress(Math.round(message.progress * 100));
                 },
             });
-            const text = result.data.text;
+            let result: Awaited<ReturnType<typeof worker.recognize>>;
+            try {
+                // With the lines' boxes: a bill's columns come back as separate blocks, and are put
+                // back into printed rows so a label and its amount share a line (lib/receiptRows.ts).
+                result = await worker.recognize(file, {}, { text: true, blocks: true });
+            } finally {
+                void worker.terminate();
+            }
+            const lines = (result.data.blocks ?? []).flatMap((block) =>
+                block.paragraphs.flatMap((paragraph) => paragraph.lines.map((line) => ({ text: line.text, left: line.bbox.x0, top: line.bbox.y0, right: line.bbox.x1, bottom: line.bbox.y1 }))),
+            );
+            const text = lines.length > 0 ? receiptRows(lines) : result.data.text;
             if (!text.trim()) {
                 fail('We couldn’t find any text. Try a sharper photo in better light.');
                 return;
