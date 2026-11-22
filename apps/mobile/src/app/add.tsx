@@ -8,6 +8,9 @@
  * Opened with an expense (`edit`), the same screen changes it: everything but who paid and the
  * group, which the server keeps as they are.
  *
+ * The mic at the top fills it from what you say (VoiceEntry.tsx): the amount, what it was for, who
+ * paid and who shares it, equally or by the amounts you said.
+ *
  * Opened from a scanned bill (scan.tsx), it starts filled in: the printed total, the shop's name and
  * the category, and the photo is kept as the new expense's receipt.
  */
@@ -15,15 +18,17 @@ import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Check, Minus, Plus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
+import type { ParsedVoice } from '@/lib/contract/v1';
 import { Platform, Pressable, TextInput, View } from 'react-native';
 import { inferCategory } from '@/lib/categoryInference';
 import { resolveSplits, type SplitRequest, type SplitType } from '@/lib/expenseSplits';
+import { useAuth } from '~/auth/AuthProvider';
 import { ME, type Expense, type Group } from '~/data/ledger';
 import { useLedger } from '~/data/LedgerProvider';
 import { GlassSurface } from '~/glass/GlassSurface';
 import { useLook } from '~/theme/ThemeProvider';
 import { FONT } from '~/theme/type';
-import { CATEGORY_IDS, categoryEmoji, categoryLabel } from '~/ui/category';
+import { CATEGORY_IDS, categoryEmoji, categoryLabel, knownCategory } from '~/ui/category';
 import { Chips } from '~/ui/Chips';
 import { EmptyState } from '~/ui/EmptyState';
 import { Field } from '~/ui/Field';
@@ -36,6 +41,7 @@ import { Screen } from '~/ui/Screen';
 import { Segmented } from '~/ui/Segmented';
 import { Text } from '~/ui/Text';
 import { useToast } from '~/ui/Toast';
+import { VoiceButton } from '~/ui/VoiceEntry';
 
 type Share = { userId: string; amount: number };
 /** The ways to split: the server's three, and shares, which become exact amounts. */
@@ -126,6 +132,7 @@ function ExpenseForm({ original, startGroup, scanned }: { original?: Expense; st
     const { tokens } = useLook();
     const { ledger, personOf, addExpense, editExpense, setReceipt } = useLedger();
     const toast = useToast();
+    const auth = useAuth();
 
     const [groupId, setGroupId] = useState(() => original?.groupId ?? (ledger.groups.some((candidate) => candidate.id === startGroup) ? startGroup! : ledger.groups[0].id));
     const group = ledger.groups.find((candidate) => candidate.id === groupId) ?? ledger.groups[0];
@@ -220,11 +227,46 @@ function ExpenseForm({ original, startGroup, scanned }: { original?: Expense; st
         else router.replace(`/group/${group.id}`);
     };
 
+    /** What the mic heard, into the form: names back to the group's people, rupees to the keypad's digits. */
+    const heard = (parsed: ParsedVoice) => {
+        const idOf = (name?: string | null) => (name ? group.memberIds.find((id) => personOf(id).name.toLowerCase() === name.toLowerCase()) : undefined);
+        if (parsed.amount > 0) setAmount(typedAmount(Math.round(parsed.amount * 100)));
+        if (parsed.title) setTitle(parsed.title);
+        const kind = parsed.category ? knownCategory(parsed.category) : 'general';
+        if (kind !== 'general') setPicked(kind);
+        const payer = idOf(parsed.payer);
+        if (payer) setPayerId(payer);
+        const people = parsed.members.map((member) => ({ id: idOf(member.name), amount: member.amount })).filter((member): member is { id: string; amount: number | null | undefined } => Boolean(member.id));
+        if (parsed.splitType === 'custom' && people.length > 0) {
+            setSplitType('custom');
+            setTyped(Object.fromEntries(people.map((member) => [member.id, member.amount ? String(member.amount) : ''])));
+        } else if (people.length > 0) {
+            setSplitType('equal');
+            setAmong(people.map((member) => member.id));
+            setTyped({});
+        }
+        toast(`Heard “${parsed.rawTranscript}”`);
+        for (const warning of parsed.warnings ?? []) toast(warning, 'info');
+    };
+
     const shown = amount ? Number(amount.endsWith('.') ? amount.slice(0, -1) : amount).toLocaleString('en-IN', { maximumFractionDigits: 2 }) + (amount.endsWith('.') ? '.' : '') : '0';
 
     return (
         <Screen tabBar={false}>
-            <Header title={original ? 'Edit expense' : 'New expense'} eyebrow={`${group.emoji} ${group.name}`} close />
+            <Header
+                title={original ? 'Edit expense' : 'New expense'}
+                eyebrow={`${group.emoji} ${group.name}`}
+                close
+                right={
+                    original ? undefined : (
+                        <VoiceButton
+                            enabled={auth.status === 'signed_in'}
+                            group={{ groupName: group.name, memberNames: group.memberIds.map((id) => personOf(id).name), speakerName: personOf(ME).name }}
+                            onHeard={heard}
+                        />
+                    )
+                }
+            />
 
             <View style={{ alignItems: 'center', paddingTop: 4 }}>
                 <Text onLiquid tabular numberOfLines={1} adjustsFontSizeToFit accessibilityLabel={`Amount ${rupees(paise)}`} style={{ fontSize: 64, lineHeight: 74, letterSpacing: -2.4, fontFamily: FONT.medium }}>

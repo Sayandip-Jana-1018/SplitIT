@@ -531,3 +531,32 @@ export const ReceiptScan = z.object({
     notes: z.string().nullable(),
 });
 export type ReceiptScan = z.infer<typeof ReceiptScan>;
+
+// ── Voice (POST /api/v1/voice/parse) ──
+
+/** The most a spoken expense may be, as a data URL: about a minute of the app's AAC. */
+export const VOICE_AUDIO_MAX_CHARS = 1_500_000;
+
+/** A short recording of someone saying an expense, with the group it goes in. */
+export const VoiceParseRequest = z.object({
+    audio: z.string().max(VOICE_AUDIO_MAX_CHARS),
+    groupName: z.string().trim().max(100).default(''),
+    memberNames: z.array(z.string().trim().min(1).max(60)).min(1).max(50),
+    /** Who is speaking, as named in memberNames: "me" and "I" are them. */
+    speakerName: z.string().trim().max(60).optional(),
+});
+export type VoiceParseRequest = z.infer<typeof VoiceParseRequest>;
+
+/** A spoken expense as the website's voice entry reads it: rupees, not paise; names as in memberNames. */
+export const ParsedVoice = z.object({
+    amount: z.number(),
+    title: z.string(),
+    category: z.string().optional(),
+    splitType: z.enum(['equal', 'custom']),
+    members: z.array(z.object({ name: z.string(), amount: z.number().nullable().optional(), confidence: z.number() })),
+    payer: z.string().nullable().optional(),
+    warnings: z.array(z.string()).optional(),
+    confidence: z.number(),
+    rawTranscript: z.string(),
+});
+export type ParsedVoice = z.infer<typeof ParsedVoice>;

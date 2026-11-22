@@ -123,7 +123,7 @@ export function SplitByItems({ scan, receipt }: { scan: ReceiptScan; receipt: st
                                 <Pressable
                                     key={id}
                                     accessibilityRole="checkbox"
-                                    accessibilityState={{ checked: on }}
+                                    aria-checked={on}
                                     accessibilityLabel={`${firstName(id)} had ${item.name}`}
                                     onPress={() => toggle(index, id)}
                                     style={{

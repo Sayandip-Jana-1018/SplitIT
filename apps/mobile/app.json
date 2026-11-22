@@ -40,7 +40,14 @@
         {
           "photosPermission": "SplitIT opens your photos only when you pick a receipt to attach.",
           "cameraPermission": "SplitIT uses the camera only when you photograph a receipt.",
-          "microphonePermission": false
+          "microphonePermission": "SplitIT listens only while you say an expense."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "SplitIT listens only while you say an expense.",
+          "recordAudioAndroid": true
         }
       ],
       "expo-secure-store",

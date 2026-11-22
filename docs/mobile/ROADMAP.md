@@ -288,7 +288,7 @@ I stop and report at the end of each phase, and start the next only when you say
 | 2 | Accounts and real data | ✅ You use the real app, with real friends, on the live site (live 15 November) |
 | 3 | Notifications and reliability | ✅ A push reached your phone; the restore drill passed (15 November) |
 | 4 | The full app: every website screen, the core loop | Code done 19 November: settle-up map and every web screen on the phone; the pretend trip passes as a test. Left: the trip by hand on your phone |
-| 5 | Smart input and auto-capture | Started 21 November: receipt scans work again (Gemini), on the website and the phone. Next: item by item, voice, share, UPI QR, capture |
+| 5 | Smart input and auto-capture | Started 21 November: receipt scans work again (Gemini) on the website and the phone, item-by-item splits, voice. Next: share and paste, UPI QR, on-phone reading, capture |
 | 6 | Missing money features | Ledger tests hold for every new case |
 | 7 | The delight layer | Gamification and the last moments, inside budget |
 | 8 | Hardening | Security, privacy, accessibility reports with no high issues; a real signing key |
@@ -427,9 +427,9 @@ The phone already keeps every group whole (people, expenses, settlements), so li
 
 **In steps** (each committed and pushed on its own; checked on your phone as they land):
 
-1. **Receipt scans that work:** one scan service for the website and the phone (`src/lib/services/receiptScan.ts`), reading with Gemini's quick model and, only when that finds nothing to add up, its careful one; OpenAI stays as the fallback when it's the only key. Out of credit is no longer called "busy". On the phone, a Scan screen (Home's Scan): a photo from the camera or your photos, shrunk on the phone, read by `POST /api/v1/receipts/scan`, shown back item by item, then added as an expense with the photo kept as its receipt. **Your part:** scan the real bill that failed.
-2. **Item by item:** splitting a scanned bill by who had what, as the website's scan page does.
-3. **Voice:** say an expense ("dinner 1,200 split with Ravi and Meera"), read by the phone's own speech recognition and the server's voice parser, landing as a filled-in expense.
+1. ✅ **Receipt scans that work** (03e9422): one scan service for the website and the phone (`src/lib/services/receiptScan.ts`), reading with Gemini's quick model and, only when that finds nothing to add up, its careful one; OpenAI stays as the fallback when it's the only key. Out of credit is no longer called "busy". On the phone, a Scan screen (Home's Scan): a photo from the camera or your photos, shrunk on the phone, read by `POST /api/v1/receipts/scan`, shown back item by item, then added as an expense with the photo kept as its receipt. **Your part:** scan the real bill that failed.
+2. ✅ **Item by item** (7f9cd47): splitting a scanned bill by who had what, with the website's own rules (`splitReceipt`): each item shared by those who had it, taxes and charges in proportion, adding up to the printed total. The demo has a sample bill to try it on.
+3. ✅ **Voice:** the mic on New expense records a few seconds of you (mono AAC, about 4 KB a second), and the server's Gemini hears and reads it in one step (`POST /api/v1/voice/parse`, the website's voice rules, moved to `src/lib/services/voiceParse.ts`), filling the amount, what it was for, who paid and who shares it. Tested on spoken clips: right in 2.9 and 5.6 seconds. New rule for both: "split **with** Ravi and Meera" includes the speaker; "between" lists everyone who shares.
 4. **Share and paste:** share a payment screenshot or message to SplitIT from any app, or paste a copied one, and it becomes a filled-in expense.
 5. **Scan a UPI QR, pay and split:** the QR opens your UPI app with the amount; back in SplitIT, the expense is ready to save.
 6. **Reading on the phone:** ML Kit text recognition, so a bill can be read with no signal.

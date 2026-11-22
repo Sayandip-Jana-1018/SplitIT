@@ -194,7 +194,7 @@ describe('POST /api/receipt-scan', () => {
         expect(generateWithGemini).toHaveBeenCalledTimes(2);
         for (const [call] of generateWithGemini.mock.calls) {
             expect(call.timeoutMs).toBeGreaterThan(0);
-            expect(call.image).toEqual({ mimeType: 'image/jpeg', data: '/9j/AAAA' });
+            expect(call.media).toEqual({ mimeType: 'image/jpeg', data: '/9j/AAAA' });
         }
         expect(fetchMock).not.toHaveBeenCalled();
     });

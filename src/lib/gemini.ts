@@ -1,5 +1,5 @@
 /**
- * One way to call Gemini, for the chat, voice parsing and receipt scans.
+ * One way to call Gemini, for the chat, voice entry and receipt scans.
  *
  * - The key travels in the `x-goog-api-key` header, never in the URL, where
  *   proxies and logs keep it.
@@ -24,8 +24,8 @@ export type GeminiResult =
 export async function generateWithGemini(params: {
     system: string;
     user: string;
-    /** A photo the person sent, read with their words: a receipt. */
-    image?: { mimeType: string; data: string };
+    /** A photo or a recording the person sent, read with their words: a receipt, a spoken expense. */
+    media?: { mimeType: string; data: string };
     model?: string;
     maxOutputTokens: number;
     temperature: number;
@@ -39,7 +39,7 @@ export async function generateWithGemini(params: {
 
     const model = params.model || process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
     const parts: Record<string, unknown>[] = [];
-    if (params.image) parts.push({ inlineData: { mimeType: params.image.mimeType, data: params.image.data } });
+    if (params.media) parts.push({ inlineData: { mimeType: params.media.mimeType, data: params.media.data } });
     parts.push({ text: params.user });
     let res: Response;
     try {

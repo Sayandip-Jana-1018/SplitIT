@@ -32,6 +32,7 @@ import {
     MessagePage,
     MessageSent,
     NotificationList,
+    ParsedVoice,
     ReceiptScan,
     SettlementMoved,
     SettlementSaved,
@@ -55,6 +56,7 @@ import {
     type NewMessage,
     type NewSettlement,
     type SettlementMove,
+    type VoiceParseRequest,
 } from '@/lib/contract/v1';
 
 export type ApiErrorKind = 'offline' | 'timeout' | 'signed_out' | 'refused' | 'server' | 'bad_answer';
@@ -252,6 +254,8 @@ export function createApi(options: ApiOptions) {
         /** Saves an expense; the same clientId again saves nothing new (`replayed`). */
         /** A photo of a bill (a JPEG data URL) read by the server's AI: a careful second look can take a minute. */
         scanReceipt: (image: string) => authed('/api/v1/receipts/scan', ReceiptScan, { method: 'POST', body: JSON.stringify({ image }), timeoutMs: 95_000 }),
+        /** A recording of someone saying an expense, heard and read by the server's AI. */
+        parseVoice: (request: VoiceParseRequest) => authed('/api/v1/voice/parse', ParsedVoice, { method: 'POST', body: JSON.stringify(request), timeoutMs: 40_000 }),
         saveExpense: (expense: NewExpense) => authed('/api/v1/expenses', ExpenseSaved, { method: 'POST', body: JSON.stringify(expense) }),
         editExpense: (id: string, edit: ExpenseEdit) => authed(`/api/v1/expenses/${encodeURIComponent(id)}`, ExpenseEdited, { method: 'PATCH', body: JSON.stringify(edit) }),
         /** 204: no body, which the client reads as null. */

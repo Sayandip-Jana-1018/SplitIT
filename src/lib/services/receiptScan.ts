@@ -158,7 +158,7 @@ const usable = (scan: ReceiptScan | null): scan is ReceiptScan => Boolean(scan &
 type Read = { ok: true; scan: ReceiptScan | null } | { ok: false; reason: 'timeout' | 'busy' | 'unavailable' };
 
 async function readWithGemini(image: { mimeType: string; data: string }, model: string, timeoutMs: number): Promise<Read> {
-    const answer = await generateWithGemini({ system: SYSTEM_PROMPT, user: ASK, image, model, maxOutputTokens: 4096, temperature: 0.1, json: true, thinking: 'low', timeoutMs });
+    const answer = await generateWithGemini({ system: SYSTEM_PROMPT, user: ASK, media: image, model, maxOutputTokens: 4096, temperature: 0.1, json: true, thinking: 'low', timeoutMs });
     if (answer.ok) {
         const parsed = modelJson(answer.text);
         return { ok: true, scan: parsed ? scanFromModel(parsed) : null };
