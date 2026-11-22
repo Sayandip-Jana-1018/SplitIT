@@ -124,7 +124,7 @@ export default function Chat() {
                             <View key={entry.id}>
                                 {day}
                                 <View style={{ flexDirection: 'row', justifyContent: mine ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: 8, marginTop: sameAsBefore ? 0 : 6 }}>
-                                    {mine ? null : <View style={{ width: 30 }}>{sameAsAfter ? null : <Avatar name={person.name} size={30} />}</View>}
+                                    {mine ? null : <View style={{ width: 30 }}>{sameAsAfter ? null : <Avatar name={person.name} image={person.image} size={30} />}</View>}
                                     <View
                                         style={{
                                             maxWidth: '78%',

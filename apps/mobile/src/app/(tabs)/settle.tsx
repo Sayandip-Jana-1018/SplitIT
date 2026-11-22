@@ -87,7 +87,7 @@ export default function Settle() {
         // You first, then the rest as the group lists them, so the map keeps its shape between visits.
         const order = [ME, ...active.memberIds];
         ids.sort((a, b) => order.indexOf(a) - order.indexOf(b));
-        return { people: ids.map((id) => ({ id, name: id === ME ? 'You' : personOf(id).name })), payments: payments.map((p) => ({ from: p.from, to: p.to, amount: p.amount })) };
+        return { people: ids.map((id) => ({ id, name: id === ME ? 'You' : personOf(id).name, image: personOf(id).image })), payments: payments.map((p) => ({ from: p.from, to: p.to, amount: p.amount })) };
     }, [active, plans, personOf]);
 
     const remind = (transfer: (typeof mine)[number]) => {
@@ -192,12 +192,13 @@ export default function Settle() {
                         {mine.map((transfer, index) => {
                             const youPay = transfer.from === ME;
                             const other = youPay ? transfer.toName : transfer.fromName;
+                            const otherImage = personOf(youPay ? transfer.to : transfer.from).image;
                             const first = firstName(other);
                             const sent = youPay && transfer.open && isAwaitingReceiverApproval(transfer.open.status) ? transfer.open : null;
                             const toConfirm = !youPay && transfer.open && !transfer.open.pending && isAwaitingReceiverApproval(transfer.open.status) ? transfer.open : null;
                             return (
                                 <View key={`${transfer.groupId}-${transfer.from}-${transfer.to}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: tokens.border }}>
-                                    <Avatar name={other} size={42} />
+                                    <Avatar name={other} image={otherImage} size={42} />
                                     <View style={{ flex: 1, gap: 2 }}>
                                         <Text variant="label" align="left" numberOfLines={1}>
                                             {youPay ? `You pay ${first}` : `${first} pays you`}
@@ -250,11 +251,12 @@ export default function Settle() {
                 <GlassSurface style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
                     {settled.map((s, index) => {
                         const youPaid = s.fromId === ME;
-                        const other = personOf(youPaid ? s.toId : s.fromId).name;
+                        const otherPerson = personOf(youPaid ? s.toId : s.fromId);
+                        const other = otherPerson.name;
                         const group = ledger.groups.find((candidate) => candidate.id === s.groupId);
                         return (
                             <View key={s.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: tokens.border }}>
-                                <Avatar name={other} size={38} />
+                                <Avatar name={other} image={otherPerson.image} size={38} />
                                 <View style={{ flex: 1, gap: 2 }}>
                                     <Text variant="label" align="left" numberOfLines={1}>
                                         {youPaid ? `You paid ${firstName(other)}` : `${firstName(other)} paid you`}

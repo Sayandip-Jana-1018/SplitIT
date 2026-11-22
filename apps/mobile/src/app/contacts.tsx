@@ -145,7 +145,7 @@ export default function Contacts() {
                                         onPress={() => setSelected(contact)}
                                         style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: tokens.border }}
                                     >
-                                        <Avatar name={contact.name} size={40} />
+                                        <Avatar name={contact.name} image={contact.image} size={40} />
                                         <View style={{ flex: 1, gap: 2 }}>
                                             <Text variant="label" align="left" numberOfLines={1}>
                                                 {contact.name}

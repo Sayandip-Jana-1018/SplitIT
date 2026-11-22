@@ -20,6 +20,7 @@ import { Text } from './Text';
 export interface MapPerson {
     id: string;
     name: string;
+    image?: string | null;
 }
 
 export interface MapPayment {
@@ -95,6 +96,7 @@ export function SettleMap({ people, payments }: { people: MapPerson[]; payments:
     const height = clamp(width * 0.84, 300, 380);
     const ids = useMemo(() => people.map((person) => person.id), [people]);
     const nameOf = useMemo(() => new Map(people.map((person) => [person.id, person.name])), [people]);
+    const imageOf = useMemo(() => new Map(people.map((person) => [person.id, person.image ?? null])), [people]);
 
     const layout = useMemo(() => {
         if (width <= 0) return null;
@@ -197,7 +199,7 @@ export function SettleMap({ people, payments }: { people: MapPerson[]; payments:
                                     onPress={() => setFocus(isFocus ? null : node.name)}
                                     style={{ position: 'absolute', left: node.x - 44, top: node.y - AVATAR / 2, width: 88, alignItems: 'center', gap: 4, opacity: quiet ? 0.35 : 1 }}
                                 >
-                                    <Avatar name={name} size={AVATAR} ring={isFocus} />
+                                    <Avatar name={name} image={imageOf.get(node.name)} size={AVATAR} ring={isFocus} />
                                     <Text variant="caption" weight="semibold" numberOfLines={1}>
                                         {firstName(name)}
                                     </Text>

@@ -59,7 +59,7 @@ export default function Groups() {
                                 <ChevronRight size={20} color={tokens.muted} />
                             </View>
                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <AvatarStack names={group.memberIds.map((id) => personOf(id).name)} size={28} />
+                                <AvatarStack people={group.memberIds.map((id) => personOf(id))} size={28} />
                                 <View style={{ alignItems: 'flex-end' }}>
                                     <Text variant="caption" tone="muted" align="right" numberOfLines={1} style={{ alignSelf: 'stretch', minWidth: 80 }}>
                                         {mine === 0 ? 'All square' : mine > 0 ? 'You get back' : 'You owe'}

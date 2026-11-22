@@ -90,7 +90,7 @@ export default function Pay() {
                 </Text>
             </View>
             <GlassSurface style={{ alignItems: 'center', gap: 8, paddingVertical: 18, paddingHorizontal: 16 }}>
-                <Avatar name={person.name} size={52} />
+                <Avatar name={person.name} image={person.image} size={52} />
                 <View style={{ alignItems: 'center', gap: 2 }}>
                     <Text variant="heading">{person.name}</Text>
                     <Text variant="caption" tone="secondary" numberOfLines={1}>

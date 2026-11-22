@@ -1,15 +1,21 @@
 /**
- * The list behind the bell, as the website's: your newest 50 notifications, unread ones marked,
- * today's first. Tapping one marks it read and opens what it's about; Mark all read clears the dot.
+ * The list behind the bell, as the website's: your newest 50 notifications, by day (today,
+ * yesterday, this week, earlier). Each row is its kind's mark, what happened on one line with
+ * when beside it, and the detail below; unread ones are marked with your colour, a bolder title
+ * and a dot. Tapping one marks it read and opens what it's about; the button at the top marks all.
+ *
+ * The server writes its texts for the website; the phone tidies them for a row that already has
+ * its mark and its title (notifications/text.ts).
  */
 import { router } from 'expo-router';
-import { ArrowLeftRight, Bell, BellRing, CircleCheck, CircleX, Mail, Receipt, UserMinus, UserPlus, type LucideIcon } from 'lucide-react-native';
-import { useEffect } from 'react';
+import { ArrowLeftRight, Bell, BellRing, CheckCheck, CircleCheck, CircleX, Mail, Receipt, UserMinus, UserPlus, type LucideIcon } from 'lucide-react-native';
+import { createElement, useEffect } from 'react';
 import { Pressable, View } from 'react-native';
 import type { AppNotification } from '@/lib/contract/v1';
 import { useAuth } from '~/auth/AuthProvider';
 import { markRead, refreshInbox, useInbox } from '~/notifications/inbox';
 import { screenFor } from '~/notifications/links';
+import { notificationDay, notificationTime, readableNotification } from '~/notifications/text';
 import { GlassSurface } from '~/glass/GlassSurface';
 import { useLook } from '~/theme/ThemeProvider';
 import { EmptyState } from '~/ui/EmptyState';
@@ -18,9 +24,6 @@ import { Header } from '~/ui/Header';
 import { Screen } from '~/ui/Screen';
 import { Skeleton } from '~/ui/Skeleton';
 import { Text } from '~/ui/Text';
-import { when } from '~/ui/time';
-
-const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 
 /** Each kind of notification's mark: an expense, a payment, a reminder, an invitation… */
 function iconOf(type: string): LucideIcon {
@@ -34,6 +37,8 @@ function iconOf(type: string): LucideIcon {
     if (type === 'group_activity' || type === 'new_expense') return Receipt;
     return Bell;
 }
+
+const DAYS = ['Today', 'Yesterday', 'This week', 'Earlier'] as const;
 
 export default function Notifications() {
     const { tokens } = useLook();
@@ -60,55 +65,21 @@ export default function Notifications() {
     };
 
     const now = new Date();
-    const today = (notifications ?? []).filter((n) => sameDay(new Date(n.createdAt), now));
-    const earlier = (notifications ?? []).filter((n) => !sameDay(new Date(n.createdAt), now));
-
-    const section = (title: string, items: AppNotification[]) =>
-        items.length === 0 ? null : (
-            <View style={{ gap: 10 }}>
-                <Text variant="eyebrow" tone="secondary" onLiquid>
-                    {title}
-                </Text>
-                <GlassSurface style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
-                    {items.map((notification, index) => (
-                        <Pressable
-                            key={notification.id}
-                            accessibilityRole="button"
-                            accessibilityLabel={`${notification.read ? '' : 'Unread. '}${notification.title}. ${notification.body}`}
-                            onPress={() => open(notification)}
-                            style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 14, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: tokens.border }}
-                        >
-                            {(() => {
-                                const Icon = iconOf(notification.type);
-                                // Unread ones are filled with your colour; read ones sit back.
-                                return (
-                                    <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: notification.read ? tokens.chip : tokens.accent }}>
-                                        <Icon size={18} color={notification.read ? tokens.fg2 : tokens.onAccent} strokeWidth={2.2} />
-                                    </View>
-                                );
-                            })()}
-                            <View style={{ flex: 1, gap: 3 }}>
-                                <Text variant="label" align="left" weight={notification.read ? 'semibold' : 'bold'}>
-                                    {notification.title}
-                                </Text>
-                                {notification.body ? (
-                                    <Text variant="caption" tone="secondary" align="left">
-                                        {notification.body}
-                                    </Text>
-                                ) : null}
-                                <Text variant="caption" tone="muted" align="left">
-                                    {when(new Date(notification.createdAt))}
-                                </Text>
-                            </View>
-                        </Pressable>
-                    ))}
-                </GlassSurface>
-            </View>
-        );
+    const days = DAYS.map((day) => ({ day, items: (notifications ?? []).filter((n) => notificationDay(new Date(n.createdAt), now) === day) })).filter((group) => group.items.length > 0);
 
     return (
         <Screen tabBar={false} onRefresh={refreshInbox}>
-            <Header title="Notifications" eyebrow={unread > 0 ? (unread === 1 ? '1 unread' : `${unread} unread`) : 'All caught up'} />
+            <Header
+                title="Notifications"
+                eyebrow={unread > 0 ? (unread === 1 ? '1 unread' : `${unread} unread`) : 'All caught up'}
+                right={
+                    unread > 0 ? (
+                        <GlassButton kind="thin" contentStyle={{ width: 42, height: 42 }} accessibilityLabel="Mark all read" onPress={() => markRead()}>
+                            <CheckCheck size={19} color={tokens.fg} strokeWidth={2.3} />
+                        </GlassButton>
+                    ) : undefined
+                }
+            />
             {notifications === null ? (
                 <View style={{ gap: 10 }}>
                     <Skeleton height={76} radius={20} />
@@ -118,18 +89,57 @@ export default function Notifications() {
             ) : notifications.length === 0 ? (
                 <EmptyState emoji="🔔" title="Nothing yet" hint="You’re told here when friends add an expense, pay you back, or remind you." />
             ) : (
-                <>
-                    {unread > 0 ? (
-                        <GlassButton kind="thin" style={{ alignSelf: 'center' }} contentStyle={{ height: 40, paddingHorizontal: 22 }} onPress={() => markRead()}>
-                            <Text variant="caption" weight="bold">
-                                Mark all read
-                            </Text>
-                        </GlassButton>
-                    ) : null}
-                    {section('Today', today)}
-                    {section('Earlier', earlier)}
-                </>
+                days.map(({ day, items }) => (
+                    <View key={day} style={{ gap: 10 }}>
+                        <Text variant="eyebrow" tone="secondary" onLiquid>
+                            {day}
+                        </Text>
+                        <GlassSurface style={{ paddingHorizontal: 14, paddingVertical: 2 }}>
+                            {items.map((notification, index) => (
+                                <Row key={notification.id} notification={notification} first={index === 0} now={now} onPress={() => open(notification)} />
+                            ))}
+                        </GlassSurface>
+                    </View>
+                ))
             )}
         </Screen>
+    );
+}
+
+function Row({ notification, first, now, onPress }: { notification: AppNotification; first: boolean; now: Date; onPress: () => void }) {
+    const { tokens } = useLook();
+    // The mark is drawn by its kind's icon, picked here rather than made a component of its own.
+    const mark = (color: string) => createElement(iconOf(notification.type), { size: 19, color, strokeWidth: 2.2 });
+    const { title, body } = readableNotification(notification.title, notification.body);
+    const unread = !notification.read;
+    const time = notificationTime(new Date(notification.createdAt), now);
+    return (
+        <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${unread ? 'Unread. ' : ''}${title}. ${body}. ${time}`}
+            onPress={onPress}
+            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderTopWidth: first ? 0 : 1, borderTopColor: tokens.border, opacity: pressed ? 0.7 : 1 })}
+        >
+            {/* Unread ones are filled with your colour; read ones sit back. */}
+            <View style={{ width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: unread ? tokens.accent : tokens.chip }}>
+                {mark(unread ? tokens.onAccent : tokens.fg2)}
+            </View>
+            <View style={{ flex: 1, gap: 3 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Text variant="label" align="left" weight={unread ? 'bold' : 'semibold'} numberOfLines={1} style={{ flex: 1 }}>
+                        {title}
+                    </Text>
+                    <Text variant="caption" tone="muted" tabular>
+                        {time}
+                    </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Text variant="caption" tone="secondary" align="left" numberOfLines={2} style={{ flex: 1 }}>
+                        {body}
+                    </Text>
+                    {unread ? <View accessibilityElementsHidden style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tokens.accentText }} /> : null}
+                </View>
+            </View>
+        </Pressable>
     );
 }

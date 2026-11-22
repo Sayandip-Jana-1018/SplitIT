@@ -147,7 +147,7 @@ export default function ExpenseScreen() {
                         const weight = expense.weights?.[split.userId];
                         return (
                             <View key={split.userId} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: tokens.border }}>
-                                <Avatar name={person.name} size={36} />
+                                <Avatar name={person.name} image={person.image} size={36} />
                                 <View style={{ flex: 1, gap: 2 }}>
                                     <Text variant="label" align="left">
                                         {split.userId === ME ? 'You' : person.first}

@@ -91,7 +91,7 @@ export default function Profile() {
                 <Header title="Profile" />
 
                 <View style={{ alignItems: 'center', gap: 10 }}>
-                    <Avatar name={you.name} size={88} ring />
+                    <Avatar name={you.name} image={you.image} size={88} ring />
                     <View style={{ alignItems: 'center', gap: 2 }}>
                         <Text variant="title" onLiquid>
                             {you.name}

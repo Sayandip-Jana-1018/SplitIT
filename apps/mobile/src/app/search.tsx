@@ -109,7 +109,7 @@ export default function Search() {
                         ? titled(
                               'People',
                               <GlassSurface style={{ paddingHorizontal: 16, paddingVertical: 4 }}>
-                                  {people.map(({ person, groups: shared }, index) => row(person.id, () => router.push(`/group/${shared[0].id}`), <Avatar name={person.name} size={40} />, person.name, `In ${shared.map((group) => group.name).join(', ')}`, index))}
+                                  {people.map(({ person, groups: shared }, index) => row(person.id, () => router.push(`/group/${shared[0].id}`), <Avatar name={person.name} image={person.image} size={40} />, person.name, `In ${shared.map((group) => group.name).join(', ')}`, index))}
                               </GlassSurface>,
                           )
                         : null}

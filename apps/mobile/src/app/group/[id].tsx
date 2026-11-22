@@ -121,7 +121,7 @@ export default function GroupScreen() {
                     <View style={{ width: 68, height: 68, borderRadius: 34, backgroundColor: tokens.chip, borderWidth: 1, borderColor: tokens.border, alignItems: 'center', justifyContent: 'center' }}>
                         <Text style={{ fontSize: 34, lineHeight: 42 }}>{group.emoji}</Text>
                     </View>
-                    <AvatarStack names={group.memberIds.map((id) => personOf(id).name)} size={26} />
+                    <AvatarStack people={group.memberIds.map((id) => personOf(id))} size={26} />
                 </View>
                 <Text variant="eyebrow" tone="secondary">
                     {mine === 0 ? 'You are all square' : mine > 0 ? 'You get back' : 'You owe'}
@@ -177,7 +177,7 @@ export default function GroupScreen() {
                         {transfers.map((transfer, index) => (
                             <View key={`${transfer.from}-${transfer.to}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: tokens.border }}>
                                 {/* The other person in it (the payer when it isn't you), as on Settle up. */}
-                                <Avatar name={transfer.from === ME ? transfer.toName : transfer.fromName} size={40} />
+                                <Avatar name={transfer.from === ME ? transfer.toName : transfer.fromName} image={personOf(transfer.from === ME ? transfer.to : transfer.from).image} size={40} />
                                 <View style={{ flex: 1 }}>
                                     <Text variant="label" align="left" numberOfLines={1}>
                                         {transfer.from === ME ? `You pay ${transfer.toName.split(' ')[0]}` : `${transfer.fromName.split(' ')[0]} pays ${transfer.to === ME ? 'you' : transfer.toName.split(' ')[0]}`}
@@ -200,7 +200,7 @@ export default function GroupScreen() {
                         const balance = balances[memberId] ?? 0;
                         return (
                             <View key={memberId} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: tokens.border }}>
-                                <Avatar name={person.name} size={40} />
+                                <Avatar name={person.name} image={person.image} size={40} />
                                 <View style={{ flex: 1, gap: 2 }}>
                                     <Text variant="label" align="left">
                                         {memberId === ME ? `${person.name} (you)` : person.name}

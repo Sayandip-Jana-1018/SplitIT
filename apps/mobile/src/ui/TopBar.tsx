@@ -48,7 +48,7 @@ export function TopBar() {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', gap: 8 }}>
                 <GlassButton kind="clear" contentStyle={{ width: SIDE, height: SIDE }} accessibilityLabel="Your profile" onPress={() => router.push('/profile')}>
-                    <Avatar name={you.name} size={32} />
+                    <Avatar name={you.name} image={you.image} size={32} />
                 </GlassButton>
                 <GlassButton kind="thin" contentStyle={{ width: SIDE, height: SIDE }} accessibilityLabel="Search" onPress={() => router.push('/search')}>
                     <Search size={19} color={tokens.fg} strokeWidth={2.2} />

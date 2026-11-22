@@ -205,14 +205,14 @@ export function useAuth(): Auth {
 }
 
 /** The name to show for you: your account's when signed in, the demo's otherwise. */
-export function useYou(): { name: string; first: string } {
+export function useYou(): { name: string; first: string; image: string | null } {
     const { status, me } = useAuth();
     if (status !== 'signed_in') {
         const demo = personById(ME);
-        return { name: demo.name, first: demo.first };
+        return { name: demo.name, first: demo.first, image: demo.image };
     }
     const name = me?.name?.trim() || me?.email?.split('@')[0] || 'You';
-    return { name, first: name.split(/\s+/)[0] };
+    return { name, first: name.split(/\s+/)[0], image: me?.image ?? null };
 }
 
 /** The sentence to show for a failed sign-in step. */

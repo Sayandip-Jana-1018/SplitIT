@@ -391,7 +391,7 @@ function ExpenseForm({ original, startGroup, scanned }: { original?: Expense; st
                         const row = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, paddingVertical: 12, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: tokens.border };
                         const name = (
                             <>
-                                <Avatar name={personOf(id).name} size={34} />
+                                <Avatar name={personOf(id).name} image={personOf(id).image} size={34} />
                                 <Text variant="label" align="left" style={{ flex: 1 }} numberOfLines={1}>
                                     {firstName(id)}
                                 </Text>
