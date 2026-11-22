@@ -16,6 +16,7 @@ import { Camera, ImageIcon, ListChecks, QrCode, RotateCcw, TriangleAlert } from 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, View } from 'react-native';
 import type { ReceiptScan } from '@/lib/contract/v1';
+import { readableName } from '@/lib/names';
 import { api, ApiError } from '~/api';
 import { useAuth } from '~/auth/AuthProvider';
 import { canReadOnPhone, scanOnPhone } from '~/data/readOnPhone';
@@ -169,13 +170,13 @@ export default function Scan() {
     const addIt = (uri: string, scan: ReceiptScan) => {
         router.replace({
             pathname: '/add',
-            params: { amount: String(scan.total), title: scan.merchant ?? '', category: knownCategory(scan.category), ...(uri ? { receipt: uri } : {}) },
+            params: { amount: String(scan.total), title: scan.merchant ? readableName(scan.merchant) : '', category: knownCategory(scan.category), ...(uri ? { receipt: uri } : {}) },
         });
     };
 
     return (
         <Screen tabBar={false}>
-            <Header title={stage.kind === 'split' ? 'Split by item' : 'Scan a bill'} eyebrow={stage.kind === 'split' ? (stage.scan.merchant ?? undefined) : undefined} close />
+            <Header title={stage.kind === 'split' ? 'Split by item' : 'Scan a bill'} eyebrow={stage.kind === 'split' && stage.scan.merchant ? readableName(stage.scan.merchant) : undefined} close />
             {stage.kind === 'choose' ? <Choose onPick={pick} /> : null}
             {stage.kind === 'reading' ? <Reading uri={stage.uri} slow={slow} /> : null}
             {stage.kind === 'read' ? (
@@ -282,7 +283,7 @@ function Result({ uri, scan, onAdd, onSplit, onAgain }: { uri: string; scan: Rec
             <GlassSurface kind="thick" style={{ paddingVertical: 22, paddingHorizontal: 18, gap: 6, alignItems: 'center' }}>
                 <Text style={{ fontSize: 34, lineHeight: 42 }}>{categoryEmoji(knownCategory(scan.category))}</Text>
                 <Text variant="title" numberOfLines={2}>
-                    {scan.merchant ?? 'Your bill'}
+                    {scan.merchant ? readableName(scan.merchant) : 'Your bill'}
                 </Text>
                 {when ? (
                     <Text variant="caption" tone="secondary">

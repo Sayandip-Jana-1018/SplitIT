@@ -12,6 +12,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 import type { ReceiptScan } from '@/lib/contract/v1';
+import { readableName } from '@/lib/names';
 import { splitReceipt } from '@/lib/receiptSplit';
 import { ME } from '~/data/ledger';
 import { useLedger } from '~/data/LedgerProvider';
@@ -71,7 +72,7 @@ export function SplitByItems({ scan, receipt }: { scan: ReceiptScan; receipt: st
         try {
             const added = addExpense({
                 groupId: group.id,
-                title: scan.merchant ?? 'Bill',
+                title: scan.merchant ? readableName(scan.merchant) : 'Bill',
                 category: knownCategory(scan.category),
                 amount: split.total,
                 payerId,
