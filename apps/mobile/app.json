@@ -56,6 +56,14 @@
         }
       ],
       [
+        "expo-camera",
+        {
+          "cameraPermission": "SplitIT uses the camera only to read a receipt or a UPI QR code.",
+          "recordAudioAndroid": true,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
         "expo-audio",
         {
           "microphonePermission": "SplitIT listens only while you say an expense.",

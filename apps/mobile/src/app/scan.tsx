@@ -11,7 +11,7 @@
  */
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Camera, ImageIcon, ListChecks, RotateCcw, TriangleAlert } from 'lucide-react-native';
+import { Camera, ImageIcon, ListChecks, QrCode, RotateCcw, TriangleAlert } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, View } from 'react-native';
 import type { ReceiptScan } from '@/lib/contract/v1';
@@ -192,6 +192,12 @@ function Choose({ onPick }: { onPick: (from: 'camera' | 'photos') => void }) {
                 <ImageIcon size={19} color={tokens.fg} strokeWidth={2.2} />
                 <Text variant="label" weight="bold">
                     Choose from your photos
+                </Text>
+            </GlassButton>
+            <GlassButton kind="thin" contentStyle={{ height: 52, flexDirection: 'row', gap: 10 }} accessibilityLabel="Pay a UPI QR code and split it" onPress={() => router.push('/qr')}>
+                <QrCode size={19} color={tokens.fg} strokeWidth={2.2} />
+                <Text variant="label" weight="bold">
+                    Pay with a UPI QR, then split
                 </Text>
             </GlassButton>
         </>
