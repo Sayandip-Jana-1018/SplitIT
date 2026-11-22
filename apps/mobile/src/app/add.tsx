@@ -11,14 +11,19 @@
  * The mic at the top fills it from what you say (VoiceEntry.tsx): the amount, what it was for, who
  * paid and who shares it, equally or by the amounts you said.
  *
+ * Paste fills it from a payment message you copied (your bank's SMS, a UPI app's alert), read on the
+ * phone by the same reader auto-capture will use (src/lib/payments/alert.ts): the text never leaves it.
+ *
  * Opened from a scanned bill (scan.tsx), it starts filled in: the printed total, the shop's name and
  * the category, and the photo is kept as the new expense's receipt.
  */
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Check, Minus, Plus } from 'lucide-react-native';
+import { Check, ClipboardPaste, Minus, Plus } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import type { ParsedVoice } from '@/lib/contract/v1';
+import { readPaymentAlert, type PaymentAlert } from '@/lib/payments/alert';
 import { Platform, Pressable, TextInput, View } from 'react-native';
 import { inferCategory } from '@/lib/categoryInference';
 import { resolveSplits, type SplitRequest, type SplitType } from '@/lib/expenseSplits';
@@ -91,6 +96,13 @@ function evenly(memberIds: string[], amount: number, type: SplitMode): Record<st
 
 /** "4800", "3525.75", "12.5": paise as the keypad would have typed them. */
 const typedAmount = (paise: number) => (paise / 100).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+
+/** Who a payment went to, as a title: "RAVI MENON" as Ravi Menon, "swiggy@icici" as Swiggy. */
+function payeeName(alert: PaymentAlert): string {
+    const raw = alert.counterparty && alert.counterparty !== alert.vpa ? alert.counterparty : (alert.vpa?.split('@')[0].replace(/[._-]+/g, ' ').replace(/d+/g, ' ') ?? '');
+    const words = raw.trim().split(/s+/).filter(Boolean);
+    return words.map((word) => (word === word.toUpperCase() || word === word.toLowerCase() ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : word)).join(' ');
+}
 
 /** The split as the screen holds it, from an expense being changed. */
 function splitFrom(expense: Expense, group: Group): { mode: SplitMode; among: string[]; typed: Record<string, string> } {
@@ -249,6 +261,30 @@ function ExpenseForm({ original, startGroup, scanned }: { original?: Expense; st
         for (const warning of parsed.warnings ?? []) toast(warning, 'info');
     };
 
+    /** A payment message you copied, read on the phone: what you paid, and to whom. */
+    const paste = async () => {
+        tap();
+        const text = await Clipboard.getStringAsync().catch(() => '');
+        if (!text.trim()) {
+            toast('Nothing copied. Copy a payment message from your bank or UPI app first.', 'info');
+            return;
+        }
+        const alert = readPaymentAlert(text);
+        if (!alert) {
+            toast('That doesn’t look like a payment. Copy the message your bank or UPI app sent.', 'info');
+            return;
+        }
+        if (alert.direction === 'credit') {
+            toast(`That’s ${rupees(alert.amount)} you received. Record it in Settle up.`, 'info');
+            return;
+        }
+        setAmount(typedAmount(alert.amount));
+        const payee = payeeName(alert);
+        if (payee) setTitle(payee);
+        setPayerId(ME);
+        toast(payee ? `Pasted ${rupees(alert.amount)} paid to ${payee}` : `Pasted ${rupees(alert.amount)}`);
+    };
+
     const shown = amount ? Number(amount.endsWith('.') ? amount.slice(0, -1) : amount).toLocaleString('en-IN', { maximumFractionDigits: 2 }) + (amount.endsWith('.') ? '.' : '') : '0';
 
     return (
@@ -278,6 +314,15 @@ function ExpenseForm({ original, startGroup, scanned }: { original?: Expense; st
             </View>
 
             <Keypad value={amount} onChange={setAmount} />
+
+            {original ? null : (
+                <GlassButton kind="thin" style={{ alignSelf: 'center' }} contentStyle={{ height: 40, paddingHorizontal: 18, flexDirection: 'row', gap: 8 }} accessibilityLabel="Paste a payment message you copied" onPress={() => void paste()}>
+                    <ClipboardPaste size={16} color={tokens.fg} strokeWidth={2.2} />
+                    <Text variant="caption" weight="bold">
+                        Paste a payment message
+                    </Text>
+                </GlassButton>
+            )}
 
             <Field label="What was it for?" value={title} onChangeText={setTitle} returnKeyType="done" />
 
