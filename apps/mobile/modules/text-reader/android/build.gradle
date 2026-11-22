@@ -1,0 +1,21 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'app.splitit'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.textreader"
+  defaultConfig {
+    versionCode 1
+    versionName '0.1.0'
+  }
+}
+
+dependencies {
+  // The Latin text model inside the app (about 4 MB), so a bill can be read with no signal from
+  // the first time, rather than waiting for Google Play services to download it.
+  implementation 'com.google.mlkit:text-recognition:16.0.1'
+}

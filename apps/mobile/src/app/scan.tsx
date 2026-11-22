@@ -4,8 +4,9 @@
  * the taxes and charges, and the printed total. Adding it opens a new expense already filled in,
  * with the photo kept as its receipt; or splitting it item by item, by who had what (SplitByItems).
  *
- * The photo is shrunk on the phone first (scanPhoto.ts). The reading needs a connection and an
- * account; without either, the screen says so and offers adding by hand. A screenshot or bill shared
+ * The photo is shrunk on the phone first (scanPhoto.ts). With no connection, or the AI busy or used up
+ * for the day, the phone reads the bill itself (readOnPhone.ts), and says to check it. The server's
+ * reading needs an account; without either, the screen says so and offers adding by hand. A screenshot or bill shared
  * to SplitIT from another app (ShareReceiver.tsx) opens here with `image`, and is read at once. The demo shows a sample
  * bill instead, read as the server would read it, so its results and splitting can be tried.
  */
@@ -17,6 +18,7 @@ import { ActivityIndicator, Image, View } from 'react-native';
 import type { ReceiptScan } from '@/lib/contract/v1';
 import { api, ApiError } from '~/api';
 import { useAuth } from '~/auth/AuthProvider';
+import { canReadOnPhone, scanOnPhone } from '~/data/readOnPhone';
 import { photoForScan } from '~/data/scanPhoto';
 import { GlassSurface } from '~/glass/GlassSurface';
 import { useLook } from '~/theme/ThemeProvider';
@@ -96,6 +98,20 @@ export default function Scan() {
             if (scan === current.current) setStage({ kind: 'read', uri, scan: read });
         } catch (error) {
             if (scan !== current.current) return;
+            // The server can't read it now: the phone reads it instead, when it can.
+            const serverOut = error instanceof ApiError && (error.kind === 'offline' || error.kind === 'timeout' || ['ai_unavailable', 'ai_limit', 'busy', 'timeout'].includes(error.code ?? ''));
+            if (serverOut && canReadOnPhone) {
+                try {
+                    const onPhone = await scanOnPhone(uri);
+                    if (scan !== current.current) return;
+                    if (onPhone) {
+                        setStage({ kind: 'read', uri, scan: onPhone });
+                        return;
+                    }
+                } catch {
+                    // Said below, as the server's answer.
+                }
+            }
             const message =
                 error instanceof ApiError
                     ? error.kind === 'offline'
