@@ -7,13 +7,15 @@
  *   lists that would otherwise wrap onto several rows (categories, groups). A chip goes off the
  *   screen's edge, never cut short inside a pill, and the chosen one is scrolled into view.
  *
- * Each pill is a pane in its screen's glass layer, all drawn in one canvas.
+ * Each pill is a pane in its screen's glass layer, all drawn in one canvas. A chip for a person
+ * (`person`) leads with their photo, or their initials, so the face is found before the name.
  */
 import { useRef, type ComponentRef } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { GlassScrollView } from '~/glass/GlassScroll';
 import { GlassSurface } from '~/glass/GlassSurface';
 import { useLook } from '~/theme/ThemeProvider';
+import { Avatar } from './Avatar';
 import { tap } from './GlassButton';
 import { Text } from './Text';
 
@@ -21,6 +23,8 @@ export interface Chip<T extends string> {
     id: T;
     label: string;
     emoji?: string;
+    /** A person: their photo (or initials) leads the chip. */
+    person?: { name: string; image?: string | null };
 }
 
 export function Chips<T extends string>({ options, value, onChange, label, rail }: { options: Chip<T>[]; value: T; onChange: (next: T) => void; label: string; rail?: boolean }) {
@@ -50,8 +54,9 @@ export function Chips<T extends string>({ options, value, onChange, label, rail 
                         const x = spots.current.get(option.id);
                         if (rail && x !== undefined) scroller.current?.scrollTo({ x: Math.max(0, x - 48), animated: true });
                     }}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, height: 40, paddingHorizontal: 16 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: option.person ? 8 : 6, height: 40, paddingLeft: option.person ? 5 : 16, paddingRight: 16 }}
                 >
+                    {option.person ? <Avatar name={option.person.name} image={option.person.image} size={30} /> : null}
                     {option.emoji ? <Text style={{ fontSize: 15, lineHeight: 20 }}>{option.emoji}</Text> : null}
                     <Text variant="caption" weight="bold" tone={selected ? 'onAccent' : 'primary'}>
                         {option.label}

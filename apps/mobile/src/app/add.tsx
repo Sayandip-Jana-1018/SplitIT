@@ -38,6 +38,7 @@ import { Chips } from '~/ui/Chips';
 import { EmptyState } from '~/ui/EmptyState';
 import { Field } from '~/ui/Field';
 import { GlassButton, tap } from '~/ui/GlassButton';
+import { GroupActions } from '~/ui/GroupActions';
 import { Header } from '~/ui/Header';
 import { Keypad } from '~/ui/Keypad';
 import { rupees } from '~/ui/money';
@@ -118,6 +119,17 @@ export default function AddExpense() {
             <Screen tabBar={false}>
                 <Header title="Edit expense" close />
                 <EmptyState emoji="🧾" title="That expense is gone" hint="It was deleted, maybe on another phone or on the website." />
+            </Screen>
+        );
+    }
+    // Opened before your groups have loaded (a share to SplitIT while it was closed), or with none yet:
+    // the form needs a group, so it waits here and opens, filled in, the moment one is there.
+    if (ledger.groups.length === 0) {
+        return (
+            <Screen tabBar={false}>
+                <Header title="New expense" close />
+                <EmptyState emoji="👥" title="No group to add it to yet" hint="Your groups are still loading, or you’re not in one yet. Make one for a trip, a flat or a dinner, or join with an invite link." />
+                <GroupActions />
             </Screen>
         );
     }
@@ -366,7 +378,7 @@ function ExpenseForm({ original, startGroup, scanned }: { original?: Expense; st
                         {payerId === ME ? 'You paid' : `${firstName(payerId)} paid`}. To change who paid, delete this and add it again.
                     </Text>
                 ) : (
-                    <Chips label="Paid by" options={group.memberIds.map((id) => ({ id, label: firstName(id) }))} value={payerId} onChange={setPayerId} />
+                    <Chips label="Paid by" options={group.memberIds.map((id) => ({ id, label: firstName(id), person: personOf(id) }))} value={payerId} onChange={setPayerId} />
                 )}
             </View>
 

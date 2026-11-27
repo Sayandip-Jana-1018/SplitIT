@@ -18,6 +18,7 @@ import { ME } from '~/data/ledger';
 import { useLedger } from '~/data/LedgerProvider';
 import { GlassSurface } from '~/glass/GlassSurface';
 import { useLook } from '~/theme/ThemeProvider';
+import { Avatar } from './Avatar';
 import { knownCategory } from './category';
 import { Chips } from './Chips';
 import { GlassButton, tap } from './GlassButton';
@@ -101,7 +102,7 @@ export function SplitByItems({ scan, receipt }: { scan: ReceiptScan; receipt: st
                 <Text variant="eyebrow" tone="secondary" onLiquid>
                     Paid by
                 </Text>
-                <Chips label="Paid by" value={payerId} onChange={setPayerId} options={group.memberIds.map((id) => ({ id, label: firstName(id) }))} />
+                <Chips label="Paid by" value={payerId} onChange={setPayerId} options={group.memberIds.map((id) => ({ id, label: firstName(id), person: personOf(id) }))} />
             </View>
 
             <Text variant="eyebrow" tone="secondary" onLiquid>
@@ -117,7 +118,7 @@ export function SplitByItems({ scan, receipt }: { scan: ReceiptScan; receipt: st
                             {rupees(item.price)}
                         </Text>
                     </View>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }} accessibilityRole="none">
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }} accessibilityRole="none">
                         {group.memberIds.map((id) => {
                             const on = had[index]?.includes(id) ?? false;
                             return (
@@ -131,14 +132,18 @@ export function SplitByItems({ scan, receipt }: { scan: ReceiptScan; receipt: st
                                         flexDirection: 'row',
                                         alignItems: 'center',
                                         gap: 6,
-                                        height: 34,
-                                        paddingHorizontal: 12,
+                                        height: 36,
+                                        paddingLeft: 4,
+                                        paddingRight: 12,
                                         borderRadius: 999,
                                         borderWidth: 1.5,
                                         borderColor: on ? tokens.fg : tokens.border,
                                         backgroundColor: on ? tokens.accent : 'transparent',
                                     }}
                                 >
+                                    <View style={{ opacity: on ? 1 : 0.55 }}>
+                                        <Avatar name={personOf(id).name} image={personOf(id).image} size={28} />
+                                    </View>
                                     <Text variant="caption" weight="bold" tone={on ? 'onAccent' : 'muted'}>
                                         {firstName(id)}
                                     </Text>
@@ -155,7 +160,8 @@ export function SplitByItems({ scan, receipt }: { scan: ReceiptScan; receipt: st
                 </Text>
                 {split ? (
                     split.shares.map((share) => (
-                        <View key={share.userId} style={{ flexDirection: 'row', alignItems: 'baseline', gap: 12, paddingVertical: 4 }}>
+                        <View key={share.userId} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 }}>
+                            <Avatar name={personOf(share.userId).name} image={personOf(share.userId).image} size={28} />
                             <Text variant="label" align="left" style={{ flex: 1 }}>
                                 {firstName(share.userId)}
                             </Text>

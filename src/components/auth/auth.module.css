@@ -363,12 +363,22 @@
     list-style: none;
 }
 
+/* Centred, as the rest of the card: each point's icon above its line, a hairline between points. */
 .perk {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 6px;
+    text-align: center;
     font-size: 13.5px;
+    line-height: 1.45;
     color: var(--fg-secondary);
+    text-wrap: balance;
+}
+
+.perk + .perk {
+    padding-top: 12px;
+    border-top: 1px solid var(--border-subtle);
 }
 
 .perk svg {

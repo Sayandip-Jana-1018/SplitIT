@@ -31,6 +31,8 @@ import { useToast } from '~/ui/Toast';
 
 const DAY_MS = 86_400_000;
 const SHOWN = 60;
+/** Alerts shown before "Show all". */
+const FEW = 5;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const day = (at: number) => `${new Date(at).getDate()} ${MONTHS[new Date(at).getMonth()]}`;
 
@@ -308,9 +310,14 @@ function Figure({ value, label }: { value: number; label: string }) {
     );
 }
 
-/** Newest first: what SplitIT read from each (an amount and who), or that it isn't a payment. */
+/**
+ * Newest first: what SplitIT read from each (an amount and who), or that it isn't a payment. Only
+ * the newest few unless you ask, so the screen stays short as alerts pile up: every alert is still
+ * kept (for the masked copy) until it is 14 days old, and payments you decided leave "To review".
+ */
 function Alerts({ alerts, now }: { alerts: CapturedAlert[]; now: Date }) {
     const { tokens } = useLook();
+    const [all, setAll] = useState(false);
     if (alerts.length === 0) {
         return (
             <GlassSurface style={{ alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 26 }}>
@@ -326,7 +333,7 @@ function Alerts({ alerts, now }: { alerts: CapturedAlert[]; now: Date }) {
             </GlassSurface>
         );
     }
-    const newest = [...alerts].reverse().slice(0, SHOWN);
+    const newest = [...alerts].reverse().slice(0, all ? SHOWN : FEW);
     return (
         <View style={{ gap: 8 }}>
             <GlassSurface style={{ paddingHorizontal: 18, paddingVertical: 2 }}>
@@ -356,7 +363,14 @@ function Alerts({ alerts, now }: { alerts: CapturedAlert[]; now: Date }) {
                     );
                 })}
             </GlassSurface>
-            {alerts.length > SHOWN ? (
+            {alerts.length > FEW ? (
+                <GlassButton kind="thin" contentStyle={{ height: 44, paddingHorizontal: 20 }} style={{ alignSelf: 'center' }} onPress={() => setAll((shown) => !shown)}>
+                    <Text variant="caption" weight="bold">
+                        {all ? 'Show fewer' : `Show all ${Math.min(alerts.length, SHOWN)}`}
+                    </Text>
+                </GlassButton>
+            ) : null}
+            {all && alerts.length > SHOWN ? (
                 <Text variant="caption" tone="secondary" onLiquid>
                     And {alerts.length - SHOWN} older, all in the masked copy.
                 </Text>
