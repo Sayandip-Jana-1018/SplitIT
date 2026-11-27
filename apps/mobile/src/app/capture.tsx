@@ -60,6 +60,11 @@ export default function Capture() {
 
     // Back from Android's settings, or from a payment app: look again.
     useFocusEffect(reload);
+    // An app added to the list in an update (a bank's new app) is read from now on, with no need to
+    // turn capture off and on: the list it reads is refreshed whenever this screen opens.
+    useEffect(() => {
+        if (captureStatus()?.capturing) startCapture(CAPTURE_SOURCES.map((source) => source.id));
+    }, []);
     useEffect(() => {
         const subscription = AppState.addEventListener('change', (state) => {
             if (state === 'active') reload();

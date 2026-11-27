@@ -23,9 +23,12 @@ export const CAPTURE_SOURCES: CaptureSource[] = [
     { id: 'com.epifi.paisa', name: 'Fi', kind: 'bank' },
     { id: 'com.sbi.lotusintouch', name: 'YONO SBI', kind: 'bank' },
     { id: 'com.snapwork.hdfc', name: 'HDFC Bank', kind: 'bank' },
+    // HDFC's newer app: HDFC stops UPI SMS alerts from 1 January 2027, so its app's alerts matter.
+    { id: 'com.hdfcbank.android.now', name: 'HDFC Bank', kind: 'bank' },
     { id: 'com.csam.icici.bank.imobile', name: 'ICICI iMobile', kind: 'bank' },
     { id: 'com.axis.mobile', name: 'Axis Mobile', kind: 'bank' },
     { id: 'com.msf.kbank.mobile', name: 'Kotak', kind: 'bank' },
+    { id: 'com.kotak811mobilebankingapp.instantsavingsupiscanandpayrecharge', name: 'Kotak 811', kind: 'bank' },
     { id: 'com.bankofbaroda.mconnect', name: 'bob World', kind: 'bank' },
     { id: 'com.canarabank.mobility', name: 'Canara ai1', kind: 'bank' },
     { id: 'com.fedmobile', name: 'FedMobile', kind: 'bank' },
