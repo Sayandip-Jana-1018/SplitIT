@@ -82,7 +82,7 @@ export default function Pay() {
             <Header title="Pay back" eyebrow={group?.name} close />
             <View style={{ alignItems: 'center', gap: 10, paddingVertical: 8 }}>
                 <Coin kind="coin" size={92} />
-                <Text variant="caption" tone="secondary" onLiquid>
+                <Text variant="caption" tone="secondary" onLiquid numberOfLines={1} style={{ alignSelf: 'stretch' }}>
                     You pay
                 </Text>
                 <Text variant="hero" weight="medium" onLiquid tabular>

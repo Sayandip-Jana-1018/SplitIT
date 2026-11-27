@@ -9,7 +9,7 @@
  * - Not in Expo Go or the web preview: Android's Expo Go can't receive pushes. The APK can.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { isRunningInExpoGo } from 'expo';
 import * as Notifications from 'expo-notifications';
 import { AndroidImportance } from 'expo-notifications';
 import { router } from 'expo-router';
@@ -38,8 +38,11 @@ interface PushContext {
 const HIDDEN_KEY = 'splitit.pushPromptHidden';
 const CHANNEL = 'activity';
 
-/** Pushes need a real build on a real phone: not Expo Go on Android, not the web preview. */
-const SUPPORTED = Platform.OS !== 'web' && !(Platform.OS === 'android' && Constants.executionEnvironment === ExecutionEnvironment.StoreClient);
+/**
+ * Pushes need a real build on a real phone: not Expo Go on Android (expo-notifications throws
+ * there since SDK 53; `isRunningInExpoGo` is its own test), not the web preview.
+ */
+const SUPPORTED = Platform.OS !== 'web' && !(Platform.OS === 'android' && isRunningInExpoGo());
 
 if (SUPPORTED) {
     // One that arrives while the app is open still shows, in the list and as a banner.
