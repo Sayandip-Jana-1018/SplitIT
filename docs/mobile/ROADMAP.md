@@ -288,8 +288,8 @@ I stop and report at the end of each phase, and start the next only when you say
 | 2 | Accounts and real data | ✅ You use the real app, with real friends, on the live site (live 15 November) |
 | 3 | Notifications and reliability | ✅ A push reached your phone; the restore drill passed (15 November) |
 | 4 | The full app: every website screen, the core loop | Code done 19 November: settle-up map and every web screen on the phone; the pretend trip passes as a test. Left: the trip by hand on your phone |
-| 5 | Smart input and auto-capture | Started 21 November: receipt scans work again (Gemini) on the website and the phone, item-by-item splits, voice, share and paste, UPI QR pay-and-split, reading on the phone. Next: auto-capture |
-| 6 | Missing money features | Ledger tests hold for every new case |
+| 5 | Smart input and auto-capture | Started 21 November: receipt scans work again (Gemini) on the website and the phone, item-by-item splits, voice, share and paste, UPI QR pay-and-split, reading on the phone, payment capture with its inbox (27 November). Left: tuning from your test week |
+| 6 | Missing money features | Started 27 November, during Phase 5's test week. Ledger tests hold for every new case |
 | 7 | The delight layer | Gamification and the last moments, inside budget |
 | 8 | Hardening | Security, privacy, accessibility reports with no high issues; a real signing key |
 | 9 | iPhone | All flows pass on the simulator |
@@ -436,7 +436,25 @@ The phone already keeps every group whole (people, expenses, settlements), so li
 7. **Payment auto-capture (Android):** first the two proofs (a week of masked alerts captured on your phone, and ₹1 UPI test payments between your own accounts), then everything in section 7: the allowlist, rule packs, merging duplicates, the review inbox, settle-up matching, the kill switch, and a test that no raw text leaves the phone. In parts:
    1. **The test week (code done 27 November):** Profile, Payment capture. It says what it reads before you agree, then takes you to Android's Notification access. A listener inside the app (`modules/payment-alerts`) drops every notification from an app not on the list (`src/capture/sources.ts`: UPI apps, banks' apps, SMS apps) before reading it, and keeps only alerts about money, never a code, in the app's own storage on the phone for 14 days. The screen shows that it's alive (and the battery fix when it goes quiet), what it read from each alert, a masked copy to share (`src/capture/mask.ts`: amounts stay; names, UPI IDs, account digits, references, phone numbers and balances hidden), and "turn off and delete". Nothing becomes an expense yet. **Your part:** turn it on, use your phone as usual for a week, make the ₹1 payments between your own accounts, then share the masked copy.
    2. **The inbox (code done 27 November, during the week):** one payment's alerts merged into one (`src/capture/payments.ts`: by UPI reference, else same amount, way, account and person within ten minutes); each payment once in "To review" on the Payment capture screen: **Split it** (New expense, filled in), **Tell them it's paid** when it is exactly what you owe someone (Pay, already paid, with the UPI reference), **Open Settle up** when someone who owes you paid you that, or **Ignore**; what you decided remembered on the phone. The test that no alert text leaves the phone (`tests/unit/mobileCapturePrivacy.test.ts`): capture's code never calls the server, kept alerts are read by one screen, Add and Pay get an amount, a title and a reference, and only the masked copy can be shared, by you.
-   3. **After the week, from your masked copy:** the reader tuned to your banks' and apps' wording (the 95% / 2% exit test), a notification when a payment is noticed (native, in the next build), rule packs as data, and the health check's brand fixes.
+   3. **Done 27 November:** a notification when a payment is noticed (one per payment, on/off on the screen), and "Paused by Android" with a Wake button when the phone stops the listener. **After the week, from your masked copy:** the reader tuned to your banks' and apps' wording (the 95% / 2% exit test), and rule packs as data (designed against the wording that actually changes).
+
+### Phase 6: missing money features (started 27 November, during Phase 5's test week)
+
+**Exit test:** the ledger's property tests hold for placeholders, several payers and currencies; existing groups' balances are unchanged by every migration; a placeholder claimed by a real person moves all their history to them.
+
+**In steps** (each on the website and the phone, from the shared services; checked in Expo Go, then a build):
+
+1. **Friends who aren't on SplitIT yet (placeholders):** add someone to a group by name only; they're in expenses and balances like anyone. Each placeholder gets a link of their own; whoever opens it and signs in becomes them, with all their history (expenses, splits, settlements). Needs one new database column set, applied by you with the Production database workflow before it goes live.
+2. **Several payers, and split by shares everywhere:** "Ravi paid ₹2,000 and I paid ₹1,000" in one expense.
+3. **A personal bucket:** payments that are only yours (most captured ones) kept apart from groups, with Insights; capture's inbox gets a "Personal" choice.
+4. **Recurring expenses:** rent, Wi-Fi and subscriptions added on their day, and suggested from captures ("₹649 every month").
+5. **Reminders that work in India:** scheduled reminders, and a WhatsApp card with your UPI QR.
+6. **Comments on an expense, its edit history, and undo** (the AuditLog already records changes).
+7. **Trip budget and daily burn.**
+8. **Other currencies,** with the rate kept on each expense.
+9. **Import from Splitwise** (its CSV export).
+10. **App lock** with fingerprint or face, hide amounts, and a blurred app switcher.
+11. **The Balance Journey as a PDF** (the website's print page, on the phone).
 
 ### The old plan's Phase 3: core loop (now part of Phase 4)
 
