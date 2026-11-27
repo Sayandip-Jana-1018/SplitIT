@@ -1,0 +1,309 @@
+/**
+ * Payment capture (roadmap section 7), its first part: a test week. Turned on, SplitIT notices the
+ * payment alerts of the apps on its list (modules/payment-alerts) and keeps the ones about money,
+ * on this phone only, for 14 days. This screen says plainly what it reads before you agree, takes
+ * you to Android's Notification access, shows that it's alive and what it read from each alert,
+ * shares a masked copy to check the reading against, and turns off deleting everything.
+ *
+ * Nothing becomes an expense yet: that comes once the week shows the reading is right for your
+ * bank. Where capture can't run (the web preview, iPhone), the same screen shows sample alerts.
+ */
+import { useFocusEffect } from 'expo-router';
+import { ArrowDownLeft, ArrowUpRight, Ban, BellRing, Share2, ShieldCheck, Smartphone, Trash2, type LucideIcon } from 'lucide-react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, AppState, Platform, Share, View } from 'react-native';
+import { payeeOf } from '@/lib/payments/alert';
+import { captureAvailable, capturedAlerts, captureStatus, openAppInfo, openNotificationAccess, startCapture, stopCapture, type CapturedAlert, type CaptureStatus } from '../../modules/payment-alerts';
+import { maskedReport, readCaptured } from '~/capture/mask';
+import { SAMPLE_ALERTS } from '~/capture/samples';
+import { CAPTURE_SOURCES, sourceName } from '~/capture/sources';
+import { GlassSurface } from '~/glass/GlassSurface';
+import { notificationTime } from '~/notifications/text';
+import { useLook } from '~/theme/ThemeProvider';
+import { GlassButton } from '~/ui/GlassButton';
+import { Header } from '~/ui/Header';
+import { rupees } from '~/ui/money';
+import { Screen, SectionTitle } from '~/ui/Screen';
+import { Text } from '~/ui/Text';
+import { useToast } from '~/ui/Toast';
+
+const DAY_MS = 86_400_000;
+const SHOWN = 60;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const day = (at: number) => `${new Date(at).getDate()} ${MONTHS[new Date(at).getMonth()]}`;
+
+/** The apps it reads, as one line: "Google Pay, PhonePe, Paytm … your bank's app and your SMS app". */
+const APPS_LINE = `${CAPTURE_SOURCES.filter((source) => source.kind === 'upi')
+    .map((source) => source.name)
+    .join(', ')}, your bank’s app and your SMS app`;
+
+/** Phones that put apps to sleep, and where their owners stop it. */
+const brand = (Platform.constants as { Brand?: string } | undefined)?.Brand?.toLowerCase() ?? '';
+const SLEEP_TIP =
+    brand === 'samsung'
+        ? 'Samsung phones put apps to sleep. In Settings, Battery, Background usage limits, add SplitIT to Never sleeping apps.'
+        : 'Some phones put apps to sleep. In Settings, Apps, SplitIT, Battery, choose Unrestricted.';
+
+interface Seen {
+    status: CaptureStatus | null;
+    alerts: CapturedAlert[];
+}
+
+const look = (): Seen => ({ status: captureStatus(), alerts: capturedAlerts() });
+
+export default function Capture() {
+    const { tokens } = useLook();
+    const toast = useToast();
+    const [seen, setSeen] = useState(look);
+    const reload = useCallback(() => setSeen(look()), []);
+
+    // Back from Android's settings, or from a payment app: look again.
+    useFocusEffect(reload);
+    useEffect(() => {
+        const subscription = AppState.addEventListener('change', (state) => {
+            if (state === 'active') reload();
+        });
+        return () => subscription.remove();
+    }, [reload]);
+
+    const { status, alerts } = seen;
+    const preview = !captureAvailable;
+    const on = Boolean(status?.capturing);
+    const now = new Date();
+
+    const turnOn = () => {
+        if (preview) return toast('Payment capture works in the Android app', 'info');
+        startCapture(CAPTURE_SOURCES.map((source) => source.id));
+        if (!captureStatus()?.access) openNotificationAccess();
+        reload();
+    };
+
+    const turnOff = () =>
+        Alert.alert('Turn off payment capture?', 'It stops at once, and everything it kept on this phone is deleted. Its access can also be taken back in Android’s Notification access.', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Turn off',
+                style: 'destructive',
+                onPress: () => {
+                    stopCapture();
+                    reload();
+                    toast('Payment capture is off, and what it kept is deleted');
+                },
+            },
+        ]);
+
+    const share = () => void Share.share({ message: maskedReport(alerts, sourceName, now) });
+
+    return (
+        <Screen tabBar={false} onRefresh={async () => reload()}>
+            <Header title="Payment capture" eyebrow={on ? 'Test week' : 'Android · optional'} />
+
+            {on && status ? <Health status={status} payments={alerts.filter((alert) => readCaptured(alert) !== null).length} now={now} /> : <Intro onTurnOn={turnOn} />}
+
+            {on || preview ? (
+                <View style={{ gap: 12 }}>
+                    <SectionTitle>
+                        <Text variant="heading" onLiquid>
+                            {preview ? 'What it looks like' : 'What it noticed'}
+                        </Text>
+                    </SectionTitle>
+                    <Alerts alerts={preview ? SAMPLE_ALERTS : alerts} now={now} />
+                    {preview ? (
+                        <Text variant="caption" tone="secondary" onLiquid>
+                            Sample alerts. On an Android phone, this shows what it really noticed.
+                        </Text>
+                    ) : null}
+                </View>
+            ) : null}
+
+            {on ? (
+                <View style={{ gap: 10 }}>
+                    <GlassButton kind="thin" contentStyle={{ height: 52, flexDirection: 'row', gap: 8 }} disabled={alerts.length === 0} onPress={share}>
+                        <Share2 size={18} color={tokens.fg} strokeWidth={2.3} />
+                        <Text variant="label">Share a masked copy</Text>
+                    </GlassButton>
+                    <Text variant="caption" tone="secondary" onLiquid>
+                        Names, UPI IDs, account digits, references and balances are hidden before it leaves SplitIT. Amounts stay. Read it before you send it.
+                    </Text>
+                    <GlassButton kind="thin" contentStyle={{ height: 52, flexDirection: 'row', gap: 8 }} onPress={turnOff}>
+                        <Trash2 size={18} color={tokens.danger} strokeWidth={2.3} />
+                        <Text variant="label" tone="danger">
+                            Turn off and delete
+                        </Text>
+                    </GlassButton>
+                </View>
+            ) : null}
+        </Screen>
+    );
+}
+
+function Intro({ onTurnOn }: { onTurnOn: () => void }) {
+    const { tokens } = useLook();
+    return (
+        <View style={{ gap: 14 }}>
+            <GlassSurface style={{ paddingHorizontal: 18, paddingVertical: 22, gap: 18 }}>
+                <View style={{ alignItems: 'center', gap: 10 }}>
+                    <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: tokens.accent, alignItems: 'center', justifyContent: 'center' }}>
+                        <BellRing size={26} color={tokens.onAccent} strokeWidth={2.2} />
+                    </View>
+                    <Text variant="heading">Notice payments as they happen</Text>
+                    <Text variant="caption" tone="secondary">
+                        When your UPI app or bank tells you money moved, SplitIT can notice it, so splitting it takes a tap.
+                    </Text>
+                </View>
+                <Point icon={ShieldCheck} title="Only payment alerts" body="From UPI apps, banks’ apps and bank SMS. Everything else is ignored unread, and codes are never kept." />
+                <Point icon={Smartphone} title="Stays on this phone" body="Nothing it notices is sent anywhere. It’s kept 14 days, then deleted." />
+                <Point icon={Trash2} title="Off in one tap" body="Turning it off deletes everything it kept." />
+            </GlassSurface>
+
+            <GlassSurface kind="thin" style={{ paddingHorizontal: 18, paddingVertical: 16, gap: 6 }}>
+                <Text variant="eyebrow" tone="accent">
+                    This week: a test
+                </Text>
+                <Text variant="caption" tone="secondary">
+                    For now it only collects, to check it reads your bank’s alerts right. Nothing becomes an expense yet. After a week, share a masked copy so the reading can be checked.
+                </Text>
+            </GlassSurface>
+
+            <GlassButton kind="accent" contentStyle={{ height: 54 }} accessibilityLabel="Turn on payment capture" onPress={onTurnOn}>
+                <Text variant="label" weight="bold" tone="onAccent">
+                    Turn on
+                </Text>
+            </GlassButton>
+            <Text variant="caption" tone="secondary" onLiquid>
+                Turning it on means you agree that SplitIT reads notifications from {APPS_LINE}, on this phone only.
+            </Text>
+        </View>
+    );
+}
+
+function Point({ icon: Icon, title, body }: { icon: LucideIcon; title: string; body: string }) {
+    const { tokens } = useLook();
+    return (
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: tokens.chip, alignItems: 'center', justifyContent: 'center' }}>
+                <Icon size={17} color={tokens.fg} strokeWidth={2.2} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+                <Text variant="label" align="left">
+                    {title}
+                </Text>
+                <Text variant="caption" tone="secondary" align="left">
+                    {body}
+                </Text>
+            </View>
+        </View>
+    );
+}
+
+/** Whether it's alive: access given, alerts arriving, and what to do when they stop. */
+function Health({ status, payments, now }: { status: CaptureStatus; payments: number; now: Date }) {
+    const { tokens } = useLook();
+    const lastSign = status.lastAt ?? status.since ?? now.getTime();
+    const quiet = status.access && now.getTime() - lastSign > 2 * DAY_MS;
+    const title = !status.access ? 'Waiting for access' : quiet ? 'Quiet for a while' : 'Noticing payments';
+    const dot = !status.access ? tokens.danger : quiet ? tokens.accentText : tokens.moneyIn;
+    const detail = !status.access
+        ? 'Switch SplitIT on in Notification access. If its switch is greyed out, open App info, tap ⋮, choose Allow restricted settings, and try again.'
+        : [status.since ? `On since ${day(status.since)}` : null, status.lastAt ? `last alert ${notificationTime(new Date(status.lastAt), now).toLowerCase()}` : 'no alerts yet'].filter(Boolean).join(' · ');
+    return (
+        <GlassSurface style={{ paddingHorizontal: 18, paddingVertical: 18, gap: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: dot }} />
+                <Text variant="label" weight="bold">
+                    {title}
+                </Text>
+            </View>
+            <Text variant="caption" tone="secondary">
+                {detail}
+            </Text>
+            {quiet ? (
+                <Text variant="caption" tone="secondary">
+                    {SLEEP_TIP}
+                </Text>
+            ) : null}
+            {status.access ? (
+                <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: tokens.border, paddingTop: 12 }}>
+                    <Figure value={status.count} label="kept" />
+                    <Figure value={payments} label="payments" />
+                    <Figure value={status.count - payments} label="not payments" />
+                </View>
+            ) : (
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <GlassButton kind="accent" style={{ flex: 1 }} contentStyle={{ height: 46 }} onPress={() => openNotificationAccess()}>
+                        <Text variant="label" weight="bold" tone="onAccent">
+                            Allow access
+                        </Text>
+                    </GlassButton>
+                    <GlassButton kind="thin" style={{ flex: 1 }} contentStyle={{ height: 46 }} onPress={() => openAppInfo()}>
+                        <Text variant="label">App info</Text>
+                    </GlassButton>
+                </View>
+            )}
+        </GlassSurface>
+    );
+}
+
+function Figure({ value, label }: { value: number; label: string }) {
+    return (
+        <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+            <Text variant="heading" tabular>
+                {value}
+            </Text>
+            <Text variant="caption" tone="secondary">
+                {label}
+            </Text>
+        </View>
+    );
+}
+
+/** Newest first: what SplitIT read from each (an amount and who), or that it isn't a payment. */
+function Alerts({ alerts, now }: { alerts: CapturedAlert[]; now: Date }) {
+    const { tokens } = useLook();
+    if (alerts.length === 0) {
+        return (
+            <GlassSurface style={{ paddingHorizontal: 18, paddingVertical: 20 }}>
+                <Text variant="caption" tone="secondary">
+                    Nothing yet. Pay someone or get paid, and its alert shows here.
+                </Text>
+            </GlassSurface>
+        );
+    }
+    const newest = [...alerts].reverse().slice(0, SHOWN);
+    return (
+        <View style={{ gap: 8 }}>
+            <GlassSurface style={{ paddingHorizontal: 14, paddingVertical: 2 }}>
+                {newest.map((alert, index) => {
+                    const payment = readCaptured(alert);
+                    const Icon = payment ? (payment.direction === 'credit' ? ArrowDownLeft : ArrowUpRight) : Ban;
+                    const who = payment ? payeeOf(payment) : '';
+                    return (
+                        <View key={alert.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: tokens.border }}>
+                            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: tokens.chip, alignItems: 'center', justifyContent: 'center' }}>
+                                <Icon size={18} color={payment ? (payment.direction === 'credit' ? tokens.moneyIn : tokens.moneyOut) : tokens.fg3} strokeWidth={2.3} />
+                            </View>
+                            <View style={{ flex: 1, gap: 3 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                    <Text variant="label" align="left" tone={payment ? 'primary' : 'muted'} numberOfLines={1} style={{ flex: 1 }}>
+                                        {payment ? `${rupees(payment.amount)} ${payment.direction === 'credit' ? 'from' : 'to'} ${who || 'someone'}` : 'Not a payment'}
+                                    </Text>
+                                    <Text variant="caption" tone="muted" tabular>
+                                        {notificationTime(new Date(alert.at), now)}
+                                    </Text>
+                                </View>
+                                <Text variant="caption" tone="secondary" align="left" numberOfLines={2}>
+                                    {sourceName(alert.app)} · {alert.text}
+                                </Text>
+                            </View>
+                        </View>
+                    );
+                })}
+            </GlassSurface>
+            {alerts.length > SHOWN ? (
+                <Text variant="caption" tone="secondary" onLiquid>
+                    And {alerts.length - SHOWN} older, all in the masked copy.
+                </Text>
+            ) : null}
+        </View>
+    );
+}

@@ -4,7 +4,8 @@
  */
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { Bell, ChevronRight, CircleHelp, Contact as ContactIcon, LogOut, Palette, PenLine, RotateCcw, ShieldCheck, type LucideIcon } from 'lucide-react-native';
+import { Bell, BellRing, ChevronRight, CircleHelp, Contact as ContactIcon, LogOut, Palette, PenLine, RotateCcw, ShieldCheck, type LucideIcon } from 'lucide-react-native';
+import { captureAvailable, captureStatus } from '../../modules/payment-alerts';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useAuth, useYou } from '~/auth/AuthProvider';
@@ -74,6 +75,8 @@ export default function Profile() {
         signedIn
             ? { icon: Bell, label: 'Notifications', onPress: notifications, detail: push.state === 'on' ? 'On' : push.state === 'asked-no' ? 'Blocked' : push.state === 'unsupported' ? 'In the app' : 'Off' }
             : { icon: Bell, label: 'Notifications', onPress: soon('Notifications come with your own account: sign in to turn them on'), detail: 'Off' },
+        // Payment capture: Android only, and off until you turn it on.
+        { icon: BellRing, label: 'Payment capture', onPress: () => router.push('/capture'), detail: captureAvailable ? (captureStatus()?.capturing ? 'On' : 'Off') : 'Android' },
         { icon: ShieldCheck, label: 'Privacy and data', onPress: () => router.push('/privacy') },
         { icon: CircleHelp, label: 'Help', onPress: soon('Help arrives before the store release'), soon: true },
         ...(signedIn ? [] : [{ icon: RotateCcw, label: 'Start the demo over', onPress: () => setAsking('restart') }]),

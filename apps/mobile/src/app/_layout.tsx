@@ -104,6 +104,7 @@ function Frame() {
                             <Stack.Screen name="privacy" />
                             <Stack.Screen name="devices" />
                             <Stack.Screen name="notifications" />
+                            <Stack.Screen name="capture" />
                             <Stack.Screen name="search" />
                             <Stack.Screen name="insights" />
                             <Stack.Screen name="profile" />
