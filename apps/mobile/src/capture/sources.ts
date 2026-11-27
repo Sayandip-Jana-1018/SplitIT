@@ -28,7 +28,6 @@ export const CAPTURE_SOURCES: CaptureSource[] = [
     { id: 'com.csam.icici.bank.imobile', name: 'ICICI iMobile', kind: 'bank' },
     { id: 'com.axis.mobile', name: 'Axis Mobile', kind: 'bank' },
     { id: 'com.msf.kbank.mobile', name: 'Kotak', kind: 'bank' },
-    { id: 'com.kotak811mobilebankingapp.instantsavingsupiscanandpayrecharge', name: 'Kotak 811', kind: 'bank' },
     { id: 'com.bankofbaroda.mconnect', name: 'bob World', kind: 'bank' },
     { id: 'com.canarabank.mobility', name: 'Canara ai1', kind: 'bank' },
     { id: 'com.fedmobile', name: 'FedMobile', kind: 'bank' },
