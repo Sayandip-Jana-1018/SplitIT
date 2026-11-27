@@ -23,7 +23,7 @@ import { useLook } from '~/theme/ThemeProvider';
 import { GlassButton } from '~/ui/GlassButton';
 import { Header } from '~/ui/Header';
 import { rupees } from '~/ui/money';
-import { Screen, SectionTitle } from '~/ui/Screen';
+import { Screen } from '~/ui/Screen';
 import { Text } from '~/ui/Text';
 import { useToast } from '~/ui/Toast';
 
@@ -101,12 +101,15 @@ export default function Capture() {
             {on && status ? <Health status={status} payments={alerts.filter((alert) => readCaptured(alert) !== null).length} now={now} /> : <Intro onTurnOn={turnOn} />}
 
             {on || preview ? (
-                <View style={{ gap: 12 }}>
-                    <SectionTitle>
+                <View style={{ gap: 16, marginTop: 6 }}>
+                    <View style={{ alignItems: 'center', gap: 2 }}>
                         <Text variant="heading" onLiquid>
                             {preview ? 'What it looks like' : 'What it noticed'}
                         </Text>
-                    </SectionTitle>
+                        <Text variant="caption" tone="secondary" onLiquid numberOfLines={1} style={{ alignSelf: 'stretch' }}>
+                            Newest first · kept 14 days
+                        </Text>
+                    </View>
                     <Alerts alerts={preview ? SAMPLE_ALERTS : alerts} now={now} />
                     {preview ? (
                         <Text variant="caption" tone="secondary" onLiquid>
@@ -141,22 +144,24 @@ function Intro({ onTurnOn }: { onTurnOn: () => void }) {
     const { tokens } = useLook();
     return (
         <View style={{ gap: 14 }}>
-            <GlassSurface style={{ paddingHorizontal: 18, paddingVertical: 22, gap: 18 }}>
+            <GlassSurface style={{ paddingHorizontal: 20, paddingVertical: 24, gap: 20 }}>
                 <View style={{ alignItems: 'center', gap: 10 }}>
-                    <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: tokens.accent, alignItems: 'center', justifyContent: 'center' }}>
-                        <BellRing size={26} color={tokens.onAccent} strokeWidth={2.2} />
+                    <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: tokens.accent, alignItems: 'center', justifyContent: 'center' }}>
+                        <BellRing size={28} color={tokens.onAccent} strokeWidth={2.2} />
                     </View>
                     <Text variant="heading">Notice payments as they happen</Text>
-                    <Text variant="caption" tone="secondary">
+                    <Text variant="caption" tone="secondary" style={{ maxWidth: 300 }}>
                         When your UPI app or bank tells you money moved, SplitIT can notice it, so splitting it takes a tap.
                     </Text>
                 </View>
-                <Point icon={ShieldCheck} title="Only payment alerts" body="From UPI apps, banks’ apps and bank SMS. Everything else is ignored unread, and codes are never kept." />
-                <Point icon={Smartphone} title="Stays on this phone" body="Nothing it notices is sent anywhere. It’s kept 14 days, then deleted." />
-                <Point icon={Trash2} title="Off in one tap" body="Turning it off deletes everything it kept." />
+                <View style={{ gap: 16 }}>
+                    <Point first icon={ShieldCheck} title="Only payment alerts" body="From UPI apps, banks’ apps and bank SMS. Everything else is ignored unread, and codes are never kept." />
+                    <Point icon={Smartphone} title="Stays on this phone" body="Nothing it notices is sent anywhere. It’s kept 14 days, then deleted." />
+                    <Point icon={Trash2} title="Off in one tap" body="Turning it off deletes everything it kept." />
+                </View>
             </GlassSurface>
 
-            <GlassSurface kind="thin" style={{ paddingHorizontal: 18, paddingVertical: 16, gap: 6 }}>
+            <GlassSurface kind="thin" style={{ paddingHorizontal: 20, paddingVertical: 16, gap: 6, alignItems: 'center' }}>
                 <Text variant="eyebrow" tone="accent">
                     This week: a test
                 </Text>
@@ -177,21 +182,20 @@ function Intro({ onTurnOn }: { onTurnOn: () => void }) {
     );
 }
 
-function Point({ icon: Icon, title, body }: { icon: LucideIcon; title: string; body: string }) {
+/** One promise, centred: its mark, what it is, and a line about it; a hairline above all but the first. */
+function Point({ icon: Icon, title, body, first }: { icon: LucideIcon; title: string; body: string; first?: boolean }) {
     const { tokens } = useLook();
     return (
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: tokens.chip, alignItems: 'center', justifyContent: 'center' }}>
-                <Icon size={17} color={tokens.fg} strokeWidth={2.2} />
+        <View style={{ alignItems: 'center', gap: 6, paddingTop: first ? 0 : 16, borderTopWidth: first ? 0 : 1, borderTopColor: tokens.border }}>
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: tokens.chip, alignItems: 'center', justifyContent: 'center' }}>
+                <Icon size={18} color={tokens.fg} strokeWidth={2.2} />
             </View>
-            <View style={{ flex: 1, gap: 2 }}>
-                <Text variant="label" align="left">
-                    {title}
-                </Text>
-                <Text variant="caption" tone="secondary" align="left">
-                    {body}
-                </Text>
-            </View>
+            <Text variant="label" weight="bold">
+                {title}
+            </Text>
+            <Text variant="caption" tone="secondary" style={{ maxWidth: 300 }}>
+                {body}
+            </Text>
         </View>
     );
 }
@@ -262,9 +266,15 @@ function Alerts({ alerts, now }: { alerts: CapturedAlert[]; now: Date }) {
     const { tokens } = useLook();
     if (alerts.length === 0) {
         return (
-            <GlassSurface style={{ paddingHorizontal: 18, paddingVertical: 20 }}>
-                <Text variant="caption" tone="secondary">
-                    Nothing yet. Pay someone or get paid, and its alert shows here.
+            <GlassSurface style={{ alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 26 }}>
+                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: tokens.chip, alignItems: 'center', justifyContent: 'center' }}>
+                    <BellRing size={22} color={tokens.fg2} strokeWidth={2.2} />
+                </View>
+                <Text variant="label" weight="bold">
+                    Nothing yet
+                </Text>
+                <Text variant="caption" tone="secondary" style={{ maxWidth: 260 }}>
+                    Pay someone or get paid, and its alert shows here within a moment.
                 </Text>
             </GlassSurface>
         );
@@ -272,29 +282,29 @@ function Alerts({ alerts, now }: { alerts: CapturedAlert[]; now: Date }) {
     const newest = [...alerts].reverse().slice(0, SHOWN);
     return (
         <View style={{ gap: 8 }}>
-            <GlassSurface style={{ paddingHorizontal: 14, paddingVertical: 2 }}>
+            <GlassSurface style={{ paddingHorizontal: 18, paddingVertical: 2 }}>
                 {newest.map((alert, index) => {
                     const payment = readCaptured(alert);
                     const Icon = payment ? (payment.direction === 'credit' ? ArrowDownLeft : ArrowUpRight) : Ban;
                     const who = payment ? payeeOf(payment) : '';
+                    const tint = payment ? (payment.direction === 'credit' ? tokens.moneyIn : tokens.moneyOut) : tokens.fg3;
                     return (
-                        <View key={alert.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: tokens.border }}>
-                            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: tokens.chip, alignItems: 'center', justifyContent: 'center' }}>
-                                <Icon size={18} color={payment ? (payment.direction === 'credit' ? tokens.moneyIn : tokens.moneyOut) : tokens.fg3} strokeWidth={2.3} />
-                            </View>
-                            <View style={{ flex: 1, gap: 3 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                    <Text variant="label" align="left" tone={payment ? 'primary' : 'muted'} numberOfLines={1} style={{ flex: 1 }}>
-                                        {payment ? `${rupees(payment.amount)} ${payment.direction === 'credit' ? 'from' : 'to'} ${who || 'someone'}` : 'Not a payment'}
-                                    </Text>
-                                    <Text variant="caption" tone="muted" tabular>
-                                        {notificationTime(new Date(alert.at), now)}
-                                    </Text>
+                        <View key={alert.id} style={{ alignItems: 'center', gap: 4, paddingVertical: 16, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: tokens.border }}>
+                            {/* What SplitIT read, centred: which way, how much, and who. */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, maxWidth: '100%' }}>
+                                <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: tokens.chip, alignItems: 'center', justifyContent: 'center' }}>
+                                    <Icon size={14} color={tint} strokeWidth={2.6} />
                                 </View>
-                                <Text variant="caption" tone="secondary" align="left" numberOfLines={2}>
-                                    {sourceName(alert.app)} · {alert.text}
+                                <Text variant="label" weight="bold" tone={payment ? 'primary' : 'muted'} numberOfLines={1} style={{ flexShrink: 1 }}>
+                                    {payment ? `${rupees(payment.amount)} ${payment.direction === 'credit' ? 'from' : 'to'} ${who || 'someone'}` : 'Not a payment'}
                                 </Text>
                             </View>
+                            <Text variant="caption" tone="muted" tabular numberOfLines={1} style={{ alignSelf: 'stretch' }}>
+                                {sourceName(alert.app)} · {notificationTime(new Date(alert.at), now)}
+                            </Text>
+                            <Text variant="caption" tone="secondary" numberOfLines={2} style={{ maxWidth: 300 }}>
+                                {alert.text}
+                            </Text>
                         </View>
                     );
                 })}

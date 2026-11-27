@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#130B26",
+    "backgroundColor": "#000000",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.splitit"
@@ -42,9 +42,13 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 140,
-          "backgroundColor": "#130B26"
+          "image": "./assets/splash-coin.png",
+          "imageWidth": 150,
+          "backgroundColor": "#FFFFFF",
+          "dark": {
+            "image": "./assets/splash-coin.png",
+            "backgroundColor": "#000000"
+          }
         }
       ],
       [

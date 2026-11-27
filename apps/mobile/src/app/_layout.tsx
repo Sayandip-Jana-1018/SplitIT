@@ -6,6 +6,7 @@
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, SplashScreen, Stack, ThemeProvider as NavigationTheme, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 import { useEffect, useMemo } from 'react';
 import { Pressable, Text as PlainText, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -72,6 +73,11 @@ function Frame() {
     useEffect(() => {
         if (restored) SplashScreen.hideAsync().catch(() => undefined);
     }, [restored]);
+    // The window behind the app (seen for a moment as screens and the keyboard move) in the
+    // theme's own background, not app.json's one colour for both.
+    useEffect(() => {
+        SystemUI.setBackgroundColorAsync(tokens.bg).catch(() => undefined);
+    }, [tokens.bg]);
     const navigationTheme = useMemo(() => {
         const base = mode === 'dark' ? DarkTheme : DefaultTheme;
         return { ...base, colors: { ...base.colors, background: 'transparent', card: 'transparent', primary: tokens.accentText, text: tokens.fg } };
