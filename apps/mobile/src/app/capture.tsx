@@ -15,6 +15,7 @@ import { Alert, AppState, Platform, Share, View } from 'react-native';
 import { payeeOf } from '@/lib/payments/alert';
 import { captureAvailable, capturedAlerts, captureStatus, openAppInfo, openNotificationAccess, startCapture, stopCapture, type CapturedAlert, type CaptureStatus } from '../../modules/payment-alerts';
 import { maskedReport, readCaptured } from '~/capture/mask';
+import { ReviewList } from '~/capture/ReviewList';
 import { SAMPLE_ALERTS } from '~/capture/samples';
 import { CAPTURE_SOURCES, sourceName } from '~/capture/sources';
 import { GlassSurface } from '~/glass/GlassSurface';
@@ -99,6 +100,8 @@ export default function Capture() {
             <Header title="Payment capture" eyebrow={on ? 'Test week' : 'Android · optional'} />
 
             {on && status ? <Health status={status} payments={alerts.filter((alert) => readCaptured(alert) !== null).length} now={now} /> : <Intro onTurnOn={turnOn} />}
+
+            {on || preview ? <ReviewList alerts={preview ? SAMPLE_ALERTS : alerts} now={now} /> : null}
 
             {on || preview ? (
                 <View style={{ gap: 16, marginTop: 6 }}>

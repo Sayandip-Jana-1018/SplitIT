@@ -29,7 +29,9 @@ export default function Pay() {
     const { tokens } = useLook();
     const { ledger, personOf, recordPayment, real, refresh } = useLedger();
     const toast = useToast();
-    const params = useLocalSearchParams<{ group: string; to: string; amount: string }>();
+    // `paid`: payment capture noticed you already paid this by UPI (with its reference, if the alert had one).
+    const params = useLocalSearchParams<{ group: string; to: string; amount: string; paid?: string; reference?: string }>();
+    const noticed = params.paid === '1';
     const amount = Number(params.amount ?? 0);
     const person = personOf(params.to ?? '');
     const group = ledger.groups.find((candidate) => candidate.id === params.group);
@@ -55,6 +57,24 @@ export default function Pay() {
             const { upiUrl } = await api.moveSettlement(settlement.id, { action: 'open_upi' });
             setOpened(settlement.id);
             if (upiUrl) await Linking.openURL(upiUrl).catch(() => toast('No UPI app on this phone could open it. Pay another way, then tap “I’ve paid”.', 'info'));
+        } catch (error) {
+            toast(authErrorMessage(error), 'info');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    /** Already paid, as payment capture saw: ask for it and say it's paid in one go, with the UPI reference. */
+    const tellPaid = async () => {
+        if (!group || !ready) return;
+        if (!real) return markPaid('upi');
+        setBusy(true);
+        try {
+            const { settlement } = await api.askSettlement({ groupId: group.id, toUserId: person.id, amount, method: 'upi' });
+            await api.moveSettlement(settlement.id, { action: 'mark_paid', utrNumber: params.reference || undefined });
+            await refresh();
+            toast(`Told ${person.first}. They confirm it next`);
+            router.back();
         } catch (error) {
             toast(authErrorMessage(error), 'info');
         } finally {
@@ -99,7 +119,19 @@ export default function Pay() {
                 </View>
             </GlassSurface>
 
-            {opened ? (
+            {noticed && !opened ? (
+                <View style={{ gap: 8 }}>
+                    <GlassButton kind="accent" contentStyle={{ height: 58, flexDirection: 'row', gap: 10 }} disabled={busy} onPress={() => void tellPaid()}>
+                        <Check size={20} color={tokens.onAccent} strokeWidth={2.6} />
+                        <Text variant="heading" tone="onAccent">
+                            {busy ? 'Telling them…' : `Tell ${person.first} it’s paid`}
+                        </Text>
+                    </GlassButton>
+                    <Text variant="caption" tone="secondary" onLiquid>
+                        SplitIT noticed you paid this by UPI{params.reference ? `, reference ending ${params.reference.slice(-4)}` : ''}.
+                    </Text>
+                </View>
+            ) : opened ? (
                 <GlassButton kind="accent" contentStyle={{ height: 58, flexDirection: 'row', gap: 10 }} disabled={busy} onPress={() => void paidByUpi()}>
                     <Check size={20} color={tokens.onAccent} strokeWidth={2.6} />
                     <Text variant="heading" tone="onAccent">
@@ -115,7 +147,7 @@ export default function Pay() {
                 </GlassButton>
             )}
 
-            {real ? (
+            {noticed ? null : real ? (
                 <GlassButton kind="thin" contentStyle={{ height: 54, flexDirection: 'row', gap: 10 }} disabled={busy} onPress={() => markPaid('cash')}>
                     <Banknote size={20} color={tokens.fg} />
                     <Text variant="label">I paid in cash</Text>
