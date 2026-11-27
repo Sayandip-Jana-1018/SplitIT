@@ -15,6 +15,7 @@ import { Alert, AppState, Platform, Pressable, Share, View } from 'react-native'
 import { payeeOf } from '@/lib/payments/alert';
 import { captureAvailable, capturedAlerts, captureStatus, openAppInfo, openNotificationAccess, setCaptureNotify, startCapture, stopCapture, wakeCapture, type CapturedAlert, type CaptureStatus } from '../../modules/payment-alerts';
 import { maskedReport, readCaptured } from '~/capture/mask';
+import { mergeAlerts } from '~/capture/payments';
 import { ReviewList } from '~/capture/ReviewList';
 import { SAMPLE_ALERTS } from '~/capture/samples';
 import { CAPTURE_SOURCES, sourceName } from '~/capture/sources';
@@ -104,7 +105,7 @@ export default function Capture() {
         <Screen tabBar={false} onRefresh={async () => reload()}>
             <Header title="Payment capture" eyebrow={on ? 'Test week' : 'Android · optional'} />
 
-            {on && status ? <Health status={status} payments={alerts.filter((alert) => readCaptured(alert) !== null).length} now={now} onChange={reload} /> : <Intro onTurnOn={turnOn} />}
+            {on && status ? <Health status={status} payments={mergeAlerts(alerts).length} other={alerts.filter((alert) => readCaptured(alert) === null).length} now={now} onChange={reload} /> : <Intro onTurnOn={turnOn} />}
 
             {on || preview ? <ReviewList alerts={preview ? SAMPLE_ALERTS : alerts} now={now} /> : null}
 
@@ -209,7 +210,8 @@ function Point({ icon: Icon, title, body, first }: { icon: LucideIcon; title: st
 }
 
 /** Whether it's alive: access given, alerts arriving, and what to do when they stop. */
-function Health({ status, payments, now, onChange }: { status: CaptureStatus; payments: number; now: Date; onChange: () => void }) {
+/** `payments`: one per real payment, however many alerts it fired; `other`: alerts that weren't payments. */
+function Health({ status, payments, other, now, onChange }: { status: CaptureStatus; payments: number; other: number; now: Date; onChange: () => void }) {
     const { tokens } = useLook();
     const lastSign = status.lastAt ?? status.since ?? now.getTime();
     // Android paused the listener after it last connected: nothing arrives until it is woken.
@@ -256,9 +258,9 @@ function Health({ status, payments, now, onChange }: { status: CaptureStatus; pa
             {status.access ? (
                 <>
                     <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: tokens.border, paddingTop: 12 }}>
-                        <Figure value={status.count} label="kept" />
+                        <Figure value={status.count} label="alerts" />
                         <Figure value={payments} label="payments" />
-                        <Figure value={status.count - payments} label="not payments" />
+                        <Figure value={other} label="not payments" />
                     </View>
                     {/* Its own notification when a payment is noticed, on unless you turn it off. */}
                     <Pressable
