@@ -47,6 +47,41 @@ describe('one payment, however many alerts it fired', () => {
         ).toHaveLength(2);
     });
 
+    it('joins a UPI app alert that came long after the bank SMS to the right payment (27 Nov: PhonePe after its 9:32 SMS)', () => {
+        const PHONEPE = 'com.phonepe.app';
+        const payments = mergeAlerts([
+            { id: 'sms1', app: SMS, title: 'AX-HDFCBK', text: 'Sent Rs.1.00 From HDFC Bank A/C *9795 To ANKIT BASU On 27/11/26 Ref 633111210107', at: t0 },
+            { id: 'sms2', app: SMS, title: 'AX-HDFCBK', text: 'Sent Rs.1.00 From HDFC Bank A/C *9795 To ANKIT BASU On 27/11/26 Ref 633111219999', at: t0 + 3 * minute },
+            { id: 'pp', app: PHONEPE, title: '', text: '₹1 has been sent to 7679204291@ybl', at: t0 + 75 * minute },
+        ]);
+        expect(payments.map((payment) => payment.alertIds)).toEqual([['sms2', 'pp'], ['sms1']]);
+        expect(payments[0]).toMatchObject({ id: 'sms2', counterparty: 'ANKIT BASU', vpa: '7679204291@ybl', apps: [SMS, PHONEPE] });
+    });
+
+    it('joins an SMS that came long after the UPI app alert', () => {
+        const payments = mergeAlerts([
+            { id: 'a', app: GPAY, title: '', text: 'Paid ₹250 to Ravi Menon', at: t0 },
+            { id: 'b', app: SMS, title: 'AX-HDFCBK', text: 'Sent Rs.250.00 From HDFC Bank A/C x1234 To RAVI MENON On 27/11/26 Ref 433111112222', at: t0 + 40 * minute },
+        ]);
+        expect(payments).toHaveLength(1);
+        expect(payments[0].alertIds).toEqual(['a', 'b']);
+    });
+
+    it('never joins late alerts across different references, the same app, or six hours', () => {
+        expect(
+            mergeAlerts([
+                { id: 'a', app: SMS, title: '', text: 'Sent Rs.1.00 From HDFC Bank A/C *9795 To ANKIT BASU Ref 633100000001', at: t0 },
+                { id: 'b', app: SMS, title: '', text: 'Sent Rs.1.00 From HDFC Bank A/C *9795 To ANKIT BASU Ref 633100000002', at: t0 + 40 * minute },
+            ]),
+        ).toHaveLength(2);
+        expect(
+            mergeAlerts([
+                { id: 'a', app: SMS, title: '', text: 'Sent Rs.1.00 From HDFC Bank A/C *9795 To ANKIT BASU Ref 633100000001', at: t0 },
+                { id: 'b', app: 'com.phonepe.app', title: '', text: '₹1 has been sent to 7679204291@ybl', at: t0 + 7 * 60 * minute },
+            ]),
+        ).toHaveLength(2);
+    });
+
     it('leaves out what is not a payment', () => {
         expect(mergeAlerts([{ id: 'a', app: GPAY, title: '', text: 'Get ₹100 cashback on your next payment!', at: t0 }])).toEqual([]);
     });

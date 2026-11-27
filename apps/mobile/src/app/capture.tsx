@@ -341,7 +341,7 @@ function Alerts({ alerts, now }: { alerts: CapturedAlert[]; now: Date }) {
                                     <Icon size={14} color={tint} strokeWidth={2.6} />
                                 </View>
                                 <Text variant="label" weight="bold" tone={payment ? 'primary' : 'muted'} numberOfLines={1} style={{ flexShrink: 1 }}>
-                                    {payment ? `${rupees(payment.amount)} ${payment.direction === 'credit' ? 'from' : 'to'} ${who || 'someone'}` : 'Not a payment'}
+                                    {payment ? `${rupees(payment.amount)} ${payment.direction === 'credit' ? 'from' : 'to'} ${who || payment.vpa || 'someone'}` : 'Not a payment'}
                                 </Text>
                             </View>
                             <Text variant="caption" tone="muted" tabular numberOfLines={1} style={{ alignSelf: 'stretch' }}>

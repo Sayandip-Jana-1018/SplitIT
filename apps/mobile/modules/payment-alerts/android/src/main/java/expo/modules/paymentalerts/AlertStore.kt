@@ -61,7 +61,7 @@ internal object AlertStore {
     )
     save(context, alerts.takeLast(MAX))
     prefs(context).edit().putLong("lastAt", now).apply()
-    Notifier.maybeNotify(context, "$title\n$text", at)
+    Notifier.maybeNotify(context, app, "$title\n$text", at)
   }
 
   @Synchronized

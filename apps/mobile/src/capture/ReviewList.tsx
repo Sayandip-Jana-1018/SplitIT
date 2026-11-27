@@ -80,7 +80,7 @@ function Card({ payment, match, now, onDecide }: { payment: CapturedPayment; mat
     const { tokens } = useLook();
     const credit = payment.direction === 'credit';
     const Icon = credit ? ArrowDownLeft : ArrowUpRight;
-    const who = payeeOf(payment) || 'someone';
+    const who = payeeOf(payment) || payment.vpa || 'someone';
     const other = match ? (match.kind === 'paid' ? match.transfer.toName : match.transfer.fromName).split(' ')[0] : '';
 
     const primary = (): { label: string; run: () => void } => {

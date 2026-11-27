@@ -45,10 +45,34 @@ function samePerson(a: PaymentAlert, b: PaymentAlert): boolean {
     return shareWords(a.counterparty, b.counterparty);
 }
 
-function samePayment(payment: CapturedPayment, alert: PaymentAlert, at: number): boolean {
+/**
+ * A UPI app can tell of a payment long after the bank's SMS (PhonePe's "₹1 has been sent to …"
+ * came after its 9:32 SMS, 27 November), and an SMS can lag the app. Such a late alert, with no
+ * reference of its own, still joins the payment, within this long, when its app hasn't told of
+ * that payment already; of several that could fit, the closest in time.
+ */
+const LATE_ALERT_MS = 6 * 60 * 60_000;
+
+/** Nothing in the two says they are different payments: amount, way, account and person agree. */
+function couldBeSame(payment: CapturedPayment, alert: PaymentAlert): boolean {
     if (payment.reference && alert.reference) return payment.reference === alert.reference;
     if (payment.account && alert.account && payment.account !== alert.account) return false;
-    return payment.amount === alert.amount && payment.direction === alert.direction && Math.abs(at - payment.at) <= SAME_PAYMENT_MS && samePerson(payment, alert);
+    return payment.amount === alert.amount && payment.direction === alert.direction && samePerson(payment, alert);
+}
+
+/** The payment an alert belongs to: by reference; else within ten minutes; else a late alert's, the closest. */
+function paymentOf(payments: CapturedPayment[], alert: PaymentAlert, app: string, at: number): CapturedPayment | undefined {
+    if (alert.reference) {
+        const byReference = payments.find((payment) => payment.reference === alert.reference);
+        if (byReference) return byReference;
+    }
+    const near = (payment: CapturedPayment) => Math.abs(at - payment.at);
+    const closest = (candidates: CapturedPayment[]) => candidates.sort((a, b) => near(a) - near(b))[0];
+    const fits = payments.filter((payment) => couldBeSame(payment, alert));
+    const soon = fits.filter((payment) => near(payment) <= SAME_PAYMENT_MS);
+    if (soon.length > 0) return closest(soon);
+    // A late alert joins only across a reference gap (one side has none) and from an app that hasn't spoken yet.
+    return closest(fits.filter((payment) => near(payment) <= LATE_ALERT_MS && !(payment.reference && alert.reference) && !payment.apps.includes(app)));
 }
 
 /** The payments the alerts describe, newest first; alerts that aren't payments are left out. */
@@ -57,7 +81,7 @@ export function mergeAlerts(alerts: (KeptAlert & { id: string })[]): CapturedPay
     for (const alert of [...alerts].sort((a, b) => a.at - b.at)) {
         const read = readCaptured(alert);
         if (!read) continue;
-        const same = payments.find((payment) => samePayment(payment, read, alert.at));
+        const same = paymentOf(payments, read, alert.app, alert.at);
         if (!same) {
             payments.push({ ...read, id: alert.id, at: alert.at, apps: [alert.app], alertIds: [alert.id] });
             continue;

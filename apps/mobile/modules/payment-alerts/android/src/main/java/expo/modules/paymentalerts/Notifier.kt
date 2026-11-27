@@ -25,6 +25,10 @@ internal object Notifier {
   private const val CHANNEL = "capture"
   private const val ID = 4100
   private const val SAME_PAYMENT_MS = 10L * 60 * 1000
+  private const val LATE_ALERT_MS = 6L * 60 * 60 * 1000
+
+  /** A UPI or bank reference in the text: such an alert names its own payment. */
+  private val REFERENCE = Regex("""(?i)\b(ref|utr|rrn)\b|\b[0-9]{12}\b""")
 
   private val NOT_A_PAYMENT = Regex(
     """(?i)\botp\b|one[- ]time password|verification code|cash ?back|\boffer\b|\bwin\b|reward|coupon|voucher|discount|\bdeal\b|\bsale\b|\b(is|are|falls?|payment) due\b|\bdue (on|date|by)\b|\boverdue\b|minimum amount|total amount due|\bstatement\b|\bwill be (debited|deducted|charged)\b|\bscheduled\b|\bupcoming\b|\bmandate\b|\bfailed\b|\bdeclined\b|\bunsuccessful\b|\bnot (been )?(processed|completed)\b|\bcould not be\b|\binsufficient\b|\brequest(ed|s)? (money|payment|for)\b|\bcollect request\b|\bhas requested\b|\bpre-?approved\b|\bloan of\b|\beligible\b"""
@@ -50,7 +54,7 @@ internal object Notifier {
     return raw.removeSuffix(".00").removeSuffix(".0")
   }
 
-  fun maybeNotify(context: Context, text: String, at: Long) {
+  fun maybeNotify(context: Context, app: String, text: String, at: Long) {
     if (!enabled(context) || NOT_A_PAYMENT.containsMatchIn(text)) return
     val debit = DEBIT.find(text)
     val credit = CREDIT.find(text)
@@ -58,9 +62,13 @@ internal object Notifier {
     val sent = credit == null || (debit != null && debit.range.first < credit.range.first)
     val amount = amountOf(text) ?: return
     val prefs = prefs(context)
-    val again = prefs.getString("notifiedAmount", null) == amount && abs(at - prefs.getLong("notifiedAt", 0L)) < SAME_PAYMENT_MS
-    if (again) return
-    prefs.edit().putString("notifiedAmount", amount).putLong("notifiedAt", at).apply()
+    val sameAmount = prefs.getString("notifiedAmount", null) == amount
+    val gap = abs(at - prefs.getLong("notifiedAt", 0L))
+    // One payment, one notification: its other alerts come within ten minutes, or, from another app
+    // and with no reference of their own, hours later (PhonePe after the bank's SMS), as the inbox merges them.
+    val late = gap < LATE_ALERT_MS && prefs.getString("notifiedApp", null) != app && !REFERENCE.containsMatchIn(text)
+    if (sameAmount && (gap < SAME_PAYMENT_MS || late)) return
+    prefs.edit().putString("notifiedAmount", amount).putLong("notifiedAt", at).putString("notifiedApp", app).apply()
     post(
       context,
       if (sent) "₹$amount sent" else "₹$amount received",
