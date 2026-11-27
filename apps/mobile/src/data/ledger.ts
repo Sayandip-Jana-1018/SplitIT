@@ -13,6 +13,8 @@ export const ME = 'me';
 
 export interface Person extends FinanceMember {
     first: string;
+    /** Added by name and not on SplitIT yet: no UPI ID, pushes or sign-in until they claim their link. */
+    placeholder?: boolean;
 }
 
 /** Made-up people. Their UPI IDs end in @demo, which no bank uses, so none can be a real person's. */

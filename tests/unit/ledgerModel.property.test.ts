@@ -56,7 +56,7 @@ function ledgerOf(group: Group): GroupLedger {
         ownerId: group.owner,
         inviteCode: 'invite',
         members: group.members.map(person),
-        people: new Map(everyone.map((id) => [id, { ...person(id), isMember: group.members.includes(id) }])),
+        people: new Map(everyone.map((id) => [id, { ...person(id), isMember: group.members.includes(id), placeholder: false }])),
         trips: [],
         defaultTripId: null,
         transactions: [],

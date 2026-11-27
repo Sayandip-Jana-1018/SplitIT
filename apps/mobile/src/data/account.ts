@@ -37,7 +37,7 @@ export function accountLedger(groups: SyncGroup[], meId: string): Ledger {
     for (const group of [...groups].sort((a, b) => lastActivity(b).localeCompare(lastActivity(a)))) {
         for (const person of group.people) {
             const id = local(person.id);
-            if (!people.has(id) || person.isMember) people.set(id, { id, name: person.name, first: firstName(person.name), image: person.image, upiId: person.upiId });
+            if (!people.has(id) || person.isMember) people.set(id, { id, name: person.name, first: firstName(person.name), image: person.image, upiId: person.upiId, placeholder: person.placeholder ?? false });
         }
         const entry: Group = { id: group.id, name: group.name, emoji: group.emoji, ownerId: local(group.ownerId), memberIds: group.people.filter((person) => person.isMember).map((person) => local(person.id)) };
         ledger.groups.push(entry);

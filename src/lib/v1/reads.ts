@@ -57,6 +57,7 @@ export async function groupDetail(userId: string, groupId: string): Promise<Grou
             upiId: person.upiId ?? null,
             balance: balanceOf(ledger, person.id),
             isMember: person.isMember,
+            placeholder: person.placeholder,
         })),
         transfers: planLedgerTransfers(ledger).map((transfer) => ({ fromId: transfer.from, toId: transfer.to, amount: transfer.amount, toUpiId: transfer.toUpiId })),
     };

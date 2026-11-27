@@ -28,6 +28,7 @@ function contentsOf(ledger: GroupLedger, details: Map<string, { category: string
             image: person.image,
             upiId: person.upiId ?? null,
             isMember: person.isMember,
+            placeholder: person.placeholder,
         })),
         expenses: ledger.transactions.map((transaction) => ({
             id: transaction.id,

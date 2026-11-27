@@ -92,6 +92,8 @@ const PersonBalance = Person.extend({
     balance: Paise,
     /** False for someone who has left but still owes or is owed. */
     isMember: z.boolean(),
+    /** Added by name and not on SplitIT yet: no account, so no UPI ID, pushes or sign-in (Phase 6). Absent from older servers. */
+    placeholder: z.boolean().optional(),
 });
 
 /** One payment of the fewest that settle the group. */
@@ -382,6 +384,20 @@ export type InvitePreview = z.infer<typeof InvitePreview>;
 export const InviteLink = z.object({ inviteCode: z.string(), url: z.string(), expiresAt: z.string() });
 export type InviteLink = z.infer<typeof InviteLink>;
 
+// ── Friends not on SplitIT yet (Phase 6 step 1) ─────────────
+
+/** Someone added to a group by name. */
+export const NewPlaceholder = z.object({ name: z.string().trim().min(1, 'Give them a name').max(60) });
+export type NewPlaceholder = z.infer<typeof NewPlaceholder>;
+
+/** Their claim link: whoever opens it and signs in becomes them. */
+export const PlaceholderLink = z.object({ userId: z.string(), name: z.string(), url: z.string() });
+export type PlaceholderLink = z.infer<typeof PlaceholderLink>;
+
+/** `renew`: a new link, ending the old one (sent to the wrong person). */
+export const PlaceholderLinkRequest = z.object({ renew: z.boolean().default(false) });
+export type PlaceholderLinkRequest = z.infer<typeof PlaceholderLinkRequest>;
+
 // ── Push notifications (Phase 3) ────────────────────────────
 
 /** This phone's Firebase Cloud Messaging token; null stops pushes to it. */
@@ -405,6 +421,7 @@ const SyncPerson = Person.extend({
     upiId: z.string().nullable(),
     /** False for someone who has left but appears in the group's history. */
     isMember: z.boolean(),
+    placeholder: z.boolean().optional(),
 });
 
 const SyncExpense = z.object({

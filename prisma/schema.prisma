@@ -76,6 +76,15 @@ model User {
   /// with, and one carrying an older version is refused (src/lib/auth.ts).
   tokenVersion  Int       @default(0)
 
+  /// A friend added to a group by name who isn't on SplitIT yet (docs/mobile/ROADMAP.md, Phase 6
+  /// step 1): in expenses and balances like anyone, but with no email or password, so never signed
+  /// in. Whoever opens their claim link and signs in becomes them (src/lib/services/placeholders.ts).
+  placeholder     Boolean @default(false)
+  /// Their claim link's secret: single use (the placeholder is gone once claimed), and any member can replace it.
+  claimToken      String? @unique
+  /// Who added them.
+  placeholderById String?
+
   accounts    Account[]
   sessions    Session[]
 

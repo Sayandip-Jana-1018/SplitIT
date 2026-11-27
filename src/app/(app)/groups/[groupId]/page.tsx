@@ -71,7 +71,8 @@ interface MemberData {
     userId: string;
     role: string;
     nickname: string | null;
-    user: { id: string; name: string | null; email: string | null; image: string | null };
+    /** placeholder: added by name, not on SplitIT yet (src/lib/services/placeholders.ts). */
+    user: { id: string; name: string | null; email: string | null; image: string | null; placeholder?: boolean };
 }
 
 interface TransactionData {
@@ -160,7 +161,11 @@ export default function GroupDetailPage() {
     const isClient = useIsClient();
 
     const [tab, setTab] = useState<Tab>('overview');
-    const [sheet, setSheet] = useState<'invite' | 'contacts' | 'trip' | 'delete' | null>(null);
+    const [sheet, setSheet] = useState<'invite' | 'contacts' | 'trip' | 'delete' | 'byName' | 'friendLink' | null>(null);
+    // A friend added by name, and the claim link to send them.
+    const [friendName, setFriendName] = useState('');
+    const [friendLink, setFriendLink] = useState<{ userId: string; name: string; url: string } | null>(null);
+    const [friendBusy, setFriendBusy] = useState(false);
     const [memberToRemove, setMemberToRemove] = useState<MemberData | null>(null);
     const [busy, setBusy] = useState(false);
     const [copied, setCopied] = useState(false);
@@ -325,6 +330,44 @@ export default function GroupDetailPage() {
         } catch {
             setContacts([]);
             toast('Could not load your contacts', 'error');
+        }
+    };
+
+    /** Adds someone by name, then shows the link that lets them become that name. */
+    const addByName = async () => {
+        if (!friendName.trim()) return;
+        setFriendBusy(true);
+        try {
+            const res = await fetch(`/api/groups/${group.id}/placeholders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: friendName }) });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                toast(data.error || 'Could not add them', 'error');
+                return;
+            }
+            setFriendName('');
+            setFriendLink(data);
+            setSheet('friendLink');
+            await refreshGroup();
+        } finally {
+            setFriendBusy(false);
+        }
+    };
+
+    /** A friend's link to send again, or a new one that ends the old. */
+    const showFriendLink = async (member: MemberData, renew = false) => {
+        setFriendBusy(true);
+        try {
+            const res = await fetch(`/api/groups/${group.id}/placeholders/${member.userId}/link`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ renew }) });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                toast(data.error || 'Could not get their link', 'error');
+                return;
+            }
+            setFriendLink({ userId: member.userId, name: member.user.name || 'Your friend', url: data.url });
+            setSheet('friendLink');
+            if (renew) toast('New link made. The old one no longer works.', 'success');
+        } finally {
+            setFriendBusy(false);
         }
     };
 
@@ -647,11 +690,21 @@ export default function GroupDetailPage() {
                                                         <>
                                                             {member.userId === group.ownerId && <Tag tone="accent">Owner</Tag>}
                                                             {member.role === 'admin' && member.userId !== group.ownerId && <Tag tone="accent">Admin</Tag>}
+                                                            {member.user.placeholder && <Tag>Not on SplitIT yet</Tag>}
                                                             {member.user.email && <Tag>{member.user.email}</Tag>}
                                                         </>
                                                     )}
                                                     trailing={(
                                                         <span className={styles.memberTrailing}>
+                                                            {member.user.placeholder && (
+                                                                <IconButton
+                                                                    icon={<Link2 size={15} />}
+                                                                    label={`Send ${member.user.name || 'them'} their link`}
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => void showFriendLink(member)}
+                                                                />
+                                                            )}
                                                             <span className={styles.memberAmount}>
                                                                 <Amount value={balance} tone="auto" signed />
                                                                 <span className={styles.memberAmountSub}>{balance > 0 ? 'gets back' : balance < 0 ? 'owes' : 'settled'}</span>
@@ -679,6 +732,9 @@ export default function GroupDetailPage() {
                                             From contacts
                                         </Button>
                                     </div>
+                                    <Button fullWidth variant="ghost" leftIcon={<UserPlus size={16} />} onClick={() => setSheet('byName')}>
+                                        Add someone not on SplitIT, by name
+                                    </Button>
                                 </>
                             )}
 
@@ -822,6 +878,38 @@ export default function GroupDetailPage() {
                         Create trip
                     </Button>
                 </div>
+            </Modal>
+
+            {/* ── A friend not on SplitIT yet ── */}
+            <Modal isOpen={sheet === 'byName'} onClose={() => setSheet(null)} title="Add by name" size="small">
+                <div className={styles.sheet}>
+                    <Input label="Their name" value={friendName} onChange={(event) => setFriendName(event.target.value)} placeholder="e.g. Ravi" maxLength={60} autoFocus />
+                    <Notice tone="info">They can be in expenses straight away. You get a link to send them: when they open it and sign in, everything under this name becomes theirs.</Notice>
+                    <Button fullWidth size="lg" disabled={!friendName.trim()} loading={friendBusy} leftIcon={<UserPlus size={17} />} onClick={addByName}>
+                        Add to {group.name}
+                    </Button>
+                </div>
+            </Modal>
+
+            <Modal isOpen={sheet === 'friendLink' && Boolean(friendLink)} onClose={() => setSheet(null)} title={friendLink ? `${friendLink.name}’s link` : 'Their link'} size="small">
+                {friendLink && (
+                    <div className={styles.sheet}>
+                        <Notice tone="info">Send this to {friendLink.name} only. Whoever opens it and signs in becomes {friendLink.name} here, with all their expenses. It works once.</Notice>
+                        <div className={styles.linkBox}>
+                            <Link2 size={16} style={{ color: 'var(--fg-muted)', flexShrink: 0 }} />
+                            <span className={styles.linkText}>{friendLink.url}</span>
+                            <Button size="sm" variant="secondary" leftIcon={<Copy size={14} />} onClick={() => navigator.clipboard.writeText(friendLink.url).then(() => toast('Link copied', 'success')).catch(() => undefined)}>
+                                Copy
+                            </Button>
+                        </div>
+                        <Button fullWidth leftIcon={<MessageCircle size={16} />} onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`I added you to "${group.name}" on SplitIT. Open this to see what we've split and join: ${friendLink.url}`)}`, '_blank')}>
+                            Send on WhatsApp
+                        </Button>
+                        <Button fullWidth variant="ghost" leftIcon={<RefreshCw size={14} />} loading={friendBusy} onClick={() => { const member = group.members.find((m) => m.userId === friendLink.userId); if (member) void showFriendLink(member, true); }}>
+                            Sent to the wrong person? Make a new link
+                        </Button>
+                    </div>
+                )}
             </Modal>
 
             {/* ── Remove member ── */}

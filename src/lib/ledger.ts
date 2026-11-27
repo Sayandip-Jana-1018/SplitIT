@@ -28,6 +28,8 @@ type Db = Prisma.TransactionClient;
 interface LedgerPerson extends FinanceMember {
     /** False for someone who appears in the group's history but has left it. */
     isMember: boolean;
+    /** Added by name and not on SplitIT yet (src/lib/services/placeholders.ts). */
+    placeholder: boolean;
 }
 
 export interface LedgerSettlement {
@@ -65,7 +67,7 @@ export interface GroupLedger {
     balances: Record<string, number>;
 }
 
-const userFields = { id: true, name: true, image: true, upiId: true } as const;
+const userFields = { id: true, name: true, image: true, upiId: true, placeholder: true } as const;
 
 /** Loads the ledgers of several groups in a fixed number of queries. */
 export async function loadGroupLedgers(groupIds: readonly string[], db: Db = prisma): Promise<GroupLedger[]> {
@@ -121,7 +123,7 @@ export async function loadGroupLedgers(groupIds: readonly string[], db: Db = pri
 
     return groups.map((group) => {
         const people = new Map<string, LedgerPerson>();
-        const addMember = (user: { id: string; name: string | null; image: string | null; upiId: string | null }, role?: string) => {
+        const addMember = (user: { id: string; name: string | null; image: string | null; upiId: string | null; placeholder: boolean }, role?: string) => {
             people.set(user.id, {
                 id: user.id,
                 name: user.name || 'Unknown',
@@ -129,6 +131,7 @@ export async function loadGroupLedgers(groupIds: readonly string[], db: Db = pri
                 upiId: user.upiId || null,
                 role,
                 isMember: true,
+                placeholder: user.placeholder,
             });
         };
         addMember(group.owner, 'admin');
@@ -156,6 +159,7 @@ export async function loadGroupLedgers(groupIds: readonly string[], db: Db = pri
                 image: former.image || null,
                 upiId: former.upiId || null,
                 isMember: false,
+                placeholder: former.placeholder,
             });
             return people.get(userId)!.name;
         };

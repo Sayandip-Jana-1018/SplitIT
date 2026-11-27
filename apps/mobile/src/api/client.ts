@@ -28,6 +28,7 @@ import {
     InvitationList,
     GroupMade,
     InviteLink,
+    PlaceholderLink,
     InvitePreview,
     MessagePage,
     MessageSent,
@@ -283,6 +284,11 @@ export function createApi(options: ApiOptions) {
         notifications: () => authed('/api/v1/notifications', NotificationList),
         markRead: (which: MarkRead) => authed('/api/v1/notifications/read', z.null(), { method: 'POST', body: JSON.stringify(which) }),
         inviteLink: (groupId: string) => authed(`/api/v1/groups/${encodeURIComponent(groupId)}/invite`, InviteLink, { method: 'POST' }),
+        /** Adds a friend not on SplitIT yet, by name; answers the link to send them (Phase 6). */
+        addPlaceholder: (groupId: string, name: string) => authed(`/api/v1/groups/${encodeURIComponent(groupId)}/placeholders`, PlaceholderLink, { method: 'POST', body: JSON.stringify({ name }) }),
+        /** Their link again, or a new one (`renew`) that ends the old. */
+        placeholderLink: (groupId: string, userId: string, renew = false) =>
+            authed(`/api/v1/groups/${encodeURIComponent(groupId)}/placeholders/${encodeURIComponent(userId)}/link`, PlaceholderLink, { method: 'POST', body: JSON.stringify({ renew }) }),
         /** Where this phone's push notifications go; null stops them. 204: no body. */
         setPushToken: (token: string | null) => authed('/api/v1/devices/push-token', z.null(), { method: 'PUT', body: JSON.stringify({ token }) }),
         /** Every group you're in, with the ones that changed since the versions given, in full. */

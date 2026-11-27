@@ -50,6 +50,7 @@ export default function Pay() {
     const payByUpi = async () => {
         if (!group || !ready) return;
         if (!real) return toast(`${person.first} is made up, so no UPI app opens. Mark it as paid instead.`, 'info');
+        if (person.placeholder) return toast(`${person.first} isn’t on SplitIT yet, so there’s no UPI ID to pay. Pay another way, then mark it paid in cash.`, 'info');
         if (!person.upiId) return toast(`${person.first} hasn’t added a UPI ID yet. Pay another way, then mark it paid in cash.`, 'info');
         setBusy(true);
         try {
