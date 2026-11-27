@@ -28,6 +28,10 @@ export interface CaptureStatus {
     lastAt: number | null;
     /** When Android last connected the listener: a sign it's alive. */
     connectedAt: number | null;
+    /** When Android last paused it: after connectedAt, capture is paused until it is woken. */
+    disconnectedAt: number | null;
+    /** Whether a "payment noticed" notification is shown. */
+    notify: boolean;
     count: number;
 }
 
@@ -36,6 +40,8 @@ interface PaymentAlertsNative {
     list(): CapturedAlert[];
     start(apps: string[]): void;
     stop(): void;
+    rebind(): boolean;
+    setNotify(on: boolean): void;
     openAccessSettings(): boolean;
     openAppInfo(): boolean;
 }
@@ -62,6 +68,15 @@ export function startCapture(apps: string[]): void {
 /** Turns capture off and deletes everything it kept. */
 export function stopCapture(): void {
     native?.stop();
+}
+
+/** Asks Android to hand notifications over again, after it paused capture. */
+export function wakeCapture(): boolean {
+    return native?.rebind() ?? false;
+}
+
+export function setCaptureNotify(on: boolean): void {
+    native?.setNotify(on);
 }
 
 export function openNotificationAccess(): boolean {

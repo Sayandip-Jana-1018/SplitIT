@@ -16,6 +16,10 @@ class AlertListener : NotificationListenerService() {
     AlertStore.connected(this)
   }
 
+  override fun onListenerDisconnected() {
+    AlertStore.disconnected(this)
+  }
+
   override fun onNotificationPosted(sbn: StatusBarNotification?) {
     if (sbn == null || !AlertStore.wants(this, sbn.packageName)) return
     val notification = sbn.notification ?: return

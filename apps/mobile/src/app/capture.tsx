@@ -11,9 +11,9 @@
 import { useFocusEffect } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Ban, BellRing, Share2, ShieldCheck, Smartphone, Trash2, type LucideIcon } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, AppState, Platform, Share, View } from 'react-native';
+import { Alert, AppState, Platform, Pressable, Share, View } from 'react-native';
 import { payeeOf } from '@/lib/payments/alert';
-import { captureAvailable, capturedAlerts, captureStatus, openAppInfo, openNotificationAccess, startCapture, stopCapture, type CapturedAlert, type CaptureStatus } from '../../modules/payment-alerts';
+import { captureAvailable, capturedAlerts, captureStatus, openAppInfo, openNotificationAccess, setCaptureNotify, startCapture, stopCapture, wakeCapture, type CapturedAlert, type CaptureStatus } from '../../modules/payment-alerts';
 import { maskedReport, readCaptured } from '~/capture/mask';
 import { ReviewList } from '~/capture/ReviewList';
 import { SAMPLE_ALERTS } from '~/capture/samples';
@@ -99,7 +99,7 @@ export default function Capture() {
         <Screen tabBar={false} onRefresh={async () => reload()}>
             <Header title="Payment capture" eyebrow={on ? 'Test week' : 'Android · optional'} />
 
-            {on && status ? <Health status={status} payments={alerts.filter((alert) => readCaptured(alert) !== null).length} now={now} /> : <Intro onTurnOn={turnOn} />}
+            {on && status ? <Health status={status} payments={alerts.filter((alert) => readCaptured(alert) !== null).length} now={now} onChange={reload} /> : <Intro onTurnOn={turnOn} />}
 
             {on || preview ? <ReviewList alerts={preview ? SAMPLE_ALERTS : alerts} now={now} /> : null}
 
@@ -204,15 +204,27 @@ function Point({ icon: Icon, title, body, first }: { icon: LucideIcon; title: st
 }
 
 /** Whether it's alive: access given, alerts arriving, and what to do when they stop. */
-function Health({ status, payments, now }: { status: CaptureStatus; payments: number; now: Date }) {
+function Health({ status, payments, now, onChange }: { status: CaptureStatus; payments: number; now: Date; onChange: () => void }) {
     const { tokens } = useLook();
     const lastSign = status.lastAt ?? status.since ?? now.getTime();
-    const quiet = status.access && now.getTime() - lastSign > 2 * DAY_MS;
-    const title = !status.access ? 'Waiting for access' : quiet ? 'Quiet for a while' : 'Noticing payments';
-    const dot = !status.access ? tokens.danger : quiet ? tokens.accentText : tokens.moneyIn;
+    // Android paused the listener after it last connected: nothing arrives until it is woken.
+    const paused = status.access && status.disconnectedAt !== null && status.disconnectedAt > (status.connectedAt ?? 0);
+    const quiet = status.access && !paused && now.getTime() - lastSign > 2 * DAY_MS;
+    const title = !status.access ? 'Waiting for access' : paused ? 'Paused by Android' : quiet ? 'Quiet for a while' : 'Noticing payments';
+    const dot = !status.access || paused ? tokens.danger : quiet ? tokens.accentText : tokens.moneyIn;
     const detail = !status.access
         ? 'Switch SplitIT on in Notification access. If its switch is greyed out, open App info, tap ⋮, choose Allow restricted settings, and try again.'
-        : [status.since ? `On since ${day(status.since)}` : null, status.lastAt ? `last alert ${notificationTime(new Date(status.lastAt), now).toLowerCase()}` : 'no alerts yet'].filter(Boolean).join(' · ');
+        : paused
+          ? 'Your phone stopped SplitIT from noticing payments, usually to save battery. Wake it, and keep it awake with the tip below.'
+          : [status.since ? `On since ${day(status.since)}` : null, status.lastAt ? `last alert ${notificationTime(new Date(status.lastAt), now).toLowerCase()}` : 'no alerts yet'].filter(Boolean).join(' · ');
+    const wake = () => {
+        wakeCapture();
+        onChange();
+    };
+    const toggleNotify = () => {
+        setCaptureNotify(!status.notify);
+        onChange();
+    };
     return (
         <GlassSurface style={{ paddingHorizontal: 18, paddingVertical: 18, gap: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
@@ -224,17 +236,42 @@ function Health({ status, payments, now }: { status: CaptureStatus; payments: nu
             <Text variant="caption" tone="secondary">
                 {detail}
             </Text>
-            {quiet ? (
+            {quiet || paused ? (
                 <Text variant="caption" tone="secondary">
                     {SLEEP_TIP}
                 </Text>
             ) : null}
+            {paused ? (
+                <GlassButton kind="accent" contentStyle={{ height: 46 }} onPress={wake}>
+                    <Text variant="label" weight="bold" tone="onAccent">
+                        Wake it
+                    </Text>
+                </GlassButton>
+            ) : null}
             {status.access ? (
-                <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: tokens.border, paddingTop: 12 }}>
-                    <Figure value={status.count} label="kept" />
-                    <Figure value={payments} label="payments" />
-                    <Figure value={status.count - payments} label="not payments" />
-                </View>
+                <>
+                    <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: tokens.border, paddingTop: 12 }}>
+                        <Figure value={status.count} label="kept" />
+                        <Figure value={payments} label="payments" />
+                        <Figure value={status.count - payments} label="not payments" />
+                    </View>
+                    {/* Its own notification when a payment is noticed, on unless you turn it off. */}
+                    <Pressable
+                        accessibilityRole="switch"
+                        accessibilityState={{ checked: status.notify }}
+                        onPress={toggleNotify}
+                        style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderTopWidth: 1, borderTopColor: tokens.border, paddingTop: 12, opacity: pressed ? 0.7 : 1 })}
+                    >
+                        <Text variant="caption" tone="secondary">
+                            Tell me when it notices a payment
+                        </Text>
+                        <View style={{ paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999, backgroundColor: status.notify ? tokens.accent : tokens.chip }}>
+                            <Text variant="caption" weight="bold" tone={status.notify ? 'onAccent' : 'secondary'}>
+                                {status.notify ? 'On' : 'Off'}
+                            </Text>
+                        </View>
+                    </Pressable>
+                </>
             ) : (
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                     <GlassButton kind="accent" style={{ flex: 1 }} contentStyle={{ height: 46 }} onPress={() => openNotificationAccess()}>

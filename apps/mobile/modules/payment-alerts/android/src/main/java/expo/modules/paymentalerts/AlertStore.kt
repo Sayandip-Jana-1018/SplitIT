@@ -38,6 +38,11 @@ internal object AlertStore {
     prefs(context).edit().putLong("connectedAt", System.currentTimeMillis()).apply()
   }
 
+  /** Android stopped handing notifications over (a phone that puts apps to sleep, or an update). */
+  fun disconnected(context: Context) {
+    prefs(context).edit().putLong("disconnectedAt", System.currentTimeMillis()).apply()
+  }
+
   @Synchronized
   fun add(context: Context, app: String, title: String, text: String, at: Long) {
     if (text.isEmpty() || !MONEY.containsMatchIn("$title\n$text") || CODE.containsMatchIn("$title\n$text")) return
@@ -56,6 +61,7 @@ internal object AlertStore {
     )
     save(context, alerts.takeLast(MAX))
     prefs(context).edit().putLong("lastAt", now).apply()
+    Notifier.maybeNotify(context, "$title\n$text", at)
   }
 
   @Synchronized
@@ -91,6 +97,8 @@ internal object AlertStore {
       "since" to time("since"),
       "lastAt" to time("lastAt"),
       "connectedAt" to time("connectedAt"),
+      "disconnectedAt" to time("disconnectedAt"),
+      "notify" to Notifier.enabled(context),
       "count" to list(context).size,
     )
   }

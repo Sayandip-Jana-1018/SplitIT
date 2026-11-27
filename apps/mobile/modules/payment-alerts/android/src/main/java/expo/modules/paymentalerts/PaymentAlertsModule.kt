@@ -30,16 +30,17 @@ class PaymentAlertsModule : Module() {
     Function("start") { apps: List<String> ->
       AlertStore.start(context, apps)
       // If access was already given, make sure Android is handing notifications over.
-      if (AlertStore.hasAccess(context)) {
-        try {
-          NotificationListenerService.requestRebind(ComponentName(context, AlertListener::class.java))
-        } catch (ignored: Exception) {
-        }
-      }
+      rebind()
       Unit
     }
 
     Function("stop") { AlertStore.stop(context) }
+
+    /** Asks Android to hand notifications over again, after it paused the listener. */
+    Function("rebind") { rebind() }
+
+    /** Whether a "payment noticed" notification is shown. */
+    Function("setNotify") { on: Boolean -> Notifier.setEnabled(context, on) }
 
     Function("openAccessSettings") {
       val component = ComponentName(context, AlertListener::class.java).flattenToString()
@@ -54,6 +55,16 @@ class PaymentAlertsModule : Module() {
 
     Function("openAppInfo") {
       open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)))
+    }
+  }
+
+  private fun rebind(): Boolean {
+    if (!AlertStore.hasAccess(context)) return false
+    return try {
+      NotificationListenerService.requestRebind(ComponentName(context, AlertListener::class.java))
+      true
+    } catch (ignored: Exception) {
+      false
     }
   }
 
